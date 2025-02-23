@@ -85,11 +85,15 @@ export default function AdminDashboard() {
 
   const onSubmit: SubmitHandler<EventFormValues> = async (data) => {
     try {
+      const localDate = new Date(data.date);
+      const utcDate = localDate.toISOString();
+
       const response = await fetch("https://localhost:7027/api/Events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
+          date: utcDate, 
           createdBy: adminId,
         }),
       });
@@ -167,6 +171,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <label className="block">Data</label>
+              {/* Usamos type="date" e depois convertemos para ISO */}
               <Input type="date" {...register("date")} />
             </div>
             <div>
