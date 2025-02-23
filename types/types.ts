@@ -16,14 +16,11 @@ export interface EmployeeLoginData extends LoginFormData {
     employeeId: string; // Adicione essa linha se não existir
 }
 
-export interface ClientRegisterData extends ClientLoginData {
-    name: string
-    confirmPassword: string
-}
+export interface RegisterFormValues {
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+  }
 
-export interface EmployeeRegisterData extends EmployeeLoginData {
-    name: string
-    confirmPassword: string
-    department: string
-}
 

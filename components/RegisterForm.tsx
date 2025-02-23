@@ -1,44 +1,82 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import type { EmployeeRegisterData } from "../types"
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
 
-const employeeRegisterSchema = z
+interface RegisterFormValues {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+const registerSchema = z
   .object({
     name: z.string().min(1, { message: "Nome é obrigatório" }),
     email: z.string().email({ message: "Email inválido" }),
-    password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres" }),
-    confirmPassword: z.string().min(6, { message: "A confirmação de senha deve ter pelo menos 6 caracteres" }),
-    employeeId: z.string().min(1, { message: "ID do funcionário é obrigatório" }),
-    department: z.string().min(1, { message: "Departamento é obrigatório" }),
+    password: z.string().min(6, {
+      message: "A senha deve ter pelo menos 6 caracteres",
+    }),
+    confirmPassword: z.string().min(6, {
+      message:
+        "A confirmação de senha deve ter pelo menos 6 caracteres",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não coincidem",
     path: ["confirmPassword"],
-  })
+  });
 
-export default function EmployeeRegisterForm() {
-  const form = useForm<EmployeeRegisterData>({
-    resolver: zodResolver(employeeRegisterSchema),
+export default function RegisterForm() {
+  const router = useRouter();
+
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       name: "",
       email: "",
       password: "",
       confirmPassword: "",
-      employeeId: "",
-      department: "",
     },
-  })
+  });
 
-  const onSubmit = (data: EmployeeRegisterData) => {
-    console.log("Register data:", data)
-    // Implement registration logic here
-  }
+  const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
+    try {
+      const response = await fetch(
+        "https://localhost:7027/api/auth/register",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            password: data.password,
+            role: 0, // O back-end define role = 0 (cliente) por padrão
+          }),
+        }
+      );
+      if (!response.ok) {
+        console.error("Erro no cadastro");
+        return;
+      }
+      const user = await response.json();
+      router.push("/client/events");
+    } catch (error) {
+      console.error("Erro ao cadastrar:", error);
+    }
+  };
 
   return (
     <Form {...form}>
@@ -56,6 +94,7 @@ export default function EmployeeRegisterForm() {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="email"
@@ -63,12 +102,13 @@ export default function EmployeeRegisterForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="seu@empresa.com" {...field} />
+                <Input placeholder="seu@email.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="password"
@@ -82,6 +122,7 @@ export default function EmployeeRegisterForm() {
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="confirmPassword"
@@ -95,37 +136,11 @@ export default function EmployeeRegisterForm() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="employeeId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>ID do Funcionário</FormLabel>
-              <FormControl>
-                <Input placeholder="Seu ID de funcionário" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="department"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Departamento</FormLabel>
-              <FormControl>
-                <Input placeholder="Seu departamento" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
         <Button type="submit" className="w-full">
-          Cadastrar como Funcionário
+          Cadastrar
         </Button>
       </form>
     </Form>
-  )
+  );
 }
-
