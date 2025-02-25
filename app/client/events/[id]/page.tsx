@@ -88,9 +88,8 @@ export default function EventDetailPage() {
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold">Controle-SE</h1>
           <nav className="flex space-x-4">
-            <a href="#" className="hover:text-gray-300">Home</a>
-            <a href="#" className="hover:text-gray-300">Ingressos</a>
-            <a href="#" className="hover:text-gray-300">Meus Ingressos</a>
+            <a href="/client/events" className="hover:text-gray-300">Home</a>
+            <a href="/client/my-tickets" className="hover:text-gray-300">Meus Ingressos</a>
           </nav>
           <div className="text-sm">Logado como: Cliente</div>
         </div>
