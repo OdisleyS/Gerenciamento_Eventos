@@ -45,7 +45,8 @@ export default function LoginForm() {
       }
       
       const user = await response.json();
-      
+      localStorage.setItem("user", JSON.stringify(user));
+
       // Se user.role === 1, o usuário é admin; caso contrário, é cliente.
       if (user.role === 1) {
         router.push("/admin/dashboard");

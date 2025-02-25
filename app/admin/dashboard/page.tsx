@@ -5,24 +5,17 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-// Defina o tipo Event conforme esperado do back‑end
-interface Event {
-  id: number;
-  name: string;
-  description?: string;
-  date: string;
-  location: string;
-  totalTickets: number;
-  availableTickets: number;
-  contactPhone?: string;
-  contactEmail?: string;
-  createdBy: number;
-}
-
-// Valores do formulário para cadastro de evento
 interface EventFormValues {
   name: string;
   description?: string;
@@ -38,18 +31,25 @@ const eventSchema = z.object({
   description: z.string().optional(),
   date: z.string().min(1, { message: "Data é obrigatória" }),
   location: z.string().min(1, { message: "Local é obrigatório" }),
-  totalTickets: z.number({ invalid_type_error: "Total de ingressos deve ser um número" }),
+  totalTickets: z.coerce.number({
+    invalid_type_error: "Total de ingressos deve ser um número",
+  }),
   contactPhone: z.string().optional(),
   contactEmail: z.string().email({ message: "Email de contato inválido" }).optional(),
 });
 
-export default function AdminDashboard() {
-  // Para testes, simule o admin logado com ID 1 e nome "Admin Name"
-  const adminId = 1;
-  const adminName = "Admin Name";
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: number;
+}
 
-  const [events, setEvents] = useState<Event[]>([]);
-  const { register, handleSubmit, reset } = useForm<EventFormValues>({
+export default function NewEventPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
+
+  const form = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
       name: "",
@@ -62,28 +62,19 @@ export default function AdminDashboard() {
     },
   });
 
-  // Função para buscar eventos reais do back‑end
-  const fetchEvents = async () => {
-    try {
-      const res = await fetch("https://localhost:7027/api/Events");
-      if (!res.ok) {
-        console.error("Erro ao buscar eventos");
-        return;
-      }
-      const data: Event[] = await res.json();
-      // Filtra somente os eventos criados pelo admin logado
-      const adminEvents = data.filter((event) => event.createdBy === adminId);
-      setEvents(adminEvents);
-    } catch (error) {
-      console.error("Erro ao buscar eventos:", error);
-    }
-  };
-
+  // Recupera os dados do usuário logado do localStorage
   useEffect(() => {
-    fetchEvents();
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
   }, []);
 
   const onSubmit: SubmitHandler<EventFormValues> = async (data) => {
+    if (!user) {
+      console.error("Usuário não autenticado");
+      return;
+    }
     try {
       const localDate = new Date(data.date);
       const utcDate = localDate.toISOString();
@@ -93,106 +84,147 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          date: utcDate, 
-          createdBy: adminId,
+          date: utcDate,
+          createdBy: user.id,
         }),
       });
+
       if (!response.ok) {
         console.error("Erro ao criar evento");
         return;
       }
-      // Após criar o evento, atualize a lista
-      await fetchEvents();
-      reset();
+
+      alert("Evento criado com sucesso!");
+      router.push("/admin/events");
+      form.reset();
     } catch (error) {
       console.error("Erro ao criar evento:", error);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Header */}
       <header className="bg-gray-800 text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold">Gestão de Eventos - Admin</h1>
-          <div className="text-sm">Logado como: {adminName}</div>
-          <nav>
-            <Link href="/logout" className="hover:underline">
+          <div className="text-sm">
+            Logado como: {user ? user.name : "Carregando..."}
+          </div>
+          <nav className="space-x-4">
+            <a href="/admin/events" className="hover:underline">
+              Meus Eventos
+            </a>
+            <a href="/logout" className="hover:underline">
               Sair
-            </Link>
+            </a>
           </nav>
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Conteúdo Principal */}
       <main className="container mx-auto p-8">
-        {/* Seção "Meus Eventos" */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">Meus Eventos</h2>
-          {events.length === 0 ? (
-            <p>Nenhum evento cadastrado.</p>
-          ) : (
-            <table className="min-w-full border">
-              <thead>
-                <tr>
-                  <th className="border px-4 py-2">Nome</th>
-                  <th className="border px-4 py-2">Data</th>
-                  <th className="border px-4 py-2">Local</th>
-                  <th className="border px-4 py-2">Ingressos Disponíveis</th>
-                  <th className="border px-4 py-2">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id}>
-                    <td className="border px-4 py-2">{event.name}</td>
-                    <td className="border px-4 py-2">{event.date}</td>
-                    <td className="border px-4 py-2">{event.location}</td>
-                    <td className="border px-4 py-2">{event.availableTickets}</td>
-                    <td className="border px-4 py-2">{event.totalTickets}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-
-        {/* Seção "Cadastrar Novo Evento" */}
-        <section>
-          <h2 className="text-2xl font-bold mb-4">Cadastrar Novo Evento</h2>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block">Nome do Evento</label>
-              <Input {...register("name")} placeholder="Nome do Evento" />
+        <h2 className="text-2xl font-bold mb-6">Cadastrar Novo Evento</h2>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded shadow-md">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Evento</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Nome do Evento" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Descrição do Evento" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Local</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Local do Evento" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-            <div>
-              <label className="block">Descrição</label>
-              <Input {...register("description")} placeholder="Descrição do Evento" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="totalTickets"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total de Ingressos</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="Total de Ingressos" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="contactPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone de Contato</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Telefone" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-            <div>
-              <label className="block">Data</label>
-              {/* Usamos type="date" e depois convertemos para ISO */}
-              <Input type="date" {...register("date")} />
-            </div>
-            <div>
-              <label className="block">Local</label>
-              <Input {...register("location")} placeholder="Local do Evento" />
-            </div>
-            <div>
-              <label className="block">Total de Ingressos</label>
-              <Input type="number" {...register("totalTickets", { valueAsNumber: true })} />
-            </div>
-            <div>
-              <label className="block">Telefone de Contato</label>
-              <Input {...register("contactPhone")} placeholder="Telefone" />
-            </div>
-            <div>
-              <label className="block">Email de Contato</label>
-              <Input {...register("contactEmail")} placeholder="email@contato.com" />
-            </div>
+            <FormField
+              control={form.control}
+              name="contactEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email de Contato</FormLabel>
+                  <FormControl>
+                    <Input placeholder="email@contato.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <Button type="submit">Cadastrar Evento</Button>
           </form>
-        </section>
+        </Form>
       </main>
 
       {/* Footer */}
