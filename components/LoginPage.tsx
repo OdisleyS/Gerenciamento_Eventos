@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import LoginForm from "./LoginForm";
 import Link from "next/link";
-import ThemeToggle from "../components/ThemeToggle";
 
 export default function LoginPage() {
   return (
@@ -11,7 +10,6 @@ export default function LoginPage() {
           <CardTitle>Login</CardTitle>
           <CardDescription>Faça login para acessar o sistema</CardDescription>
         </CardHeader>
-        <ThemeToggle />
         <CardContent>
           <LoginForm />
         </CardContent>

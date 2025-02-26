@@ -11,12 +11,26 @@ interface Event {
   // ... demais campos retornados pelo backend
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: number;
+}
+
 export default function ClientEvents() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
-  // Carrega os eventos do back-end
+  // Carrega os dados do usuário e eventos do back-end
   useEffect(() => {
+    // Recupera os dados do usuário logado do localStorage
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    
     fetch("https://localhost:7027/api/events")
       .then((res) => res.json())
       .then((data) => setEvents(data))
@@ -76,7 +90,7 @@ export default function ClientEvents() {
           <div className="flex-shrink-0 w-1/4 flex justify-end">
             <div className="flex items-center space-x-4">
               <div className="text-sm bg-gray-700 px-3 py-1 rounded-full">
-                Logado como: Cliente
+                Logado como: {user ? user.name : "Carregando..."}
               </div>
               <a 
                 href="http://localhost:3000" 

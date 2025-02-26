@@ -16,15 +16,29 @@ interface EventDetail {
   // ... demais campos do evento
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: number;
+}
+
 export default function EventDetailPage() {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
 
   const router = useRouter();
   const params = useParams(); // Pega o [id] da rota
   const { id } = params;      // Em Next 13, vem como string
 
   useEffect(() => {
+    // Recupera os dados do usuário logado do localStorage
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+
     if (!id) return; // se não tiver id, não faz nada
 
     fetch(`https://localhost:7027/api/events/${id}`)
@@ -102,12 +116,10 @@ export default function EventDetailPage() {
     }
   };
 
-  // Função para acessar a loja do evento
-  const acessarLoja = () => {
-    // Aqui você pode implementar a lógica para acessar a loja do evento
-    // Por exemplo, redirecionar para uma página de loja específica deste evento
+  const handleAccessStore = () => {
+    // Aqui você poderia navegar para a loja do evento, por exemplo:
     alert("Redirecionando para a loja do evento...");
-    // router.push(`/client/events/${id}/store`);
+    // router.push(`/event-store/${id}`);
   };
 
   if (loading) {
@@ -158,7 +170,7 @@ export default function EventDetailPage() {
           <div className="flex-shrink-0 w-1/4 flex justify-end">
             <div className="flex items-center space-x-4">
               <div className="text-sm bg-gray-700 px-3 py-1 rounded-full">
-                Logado como: Cliente
+                Logado como: {user ? user.name : "Carregando..."}
               </div>
               <a 
                 href="http://localhost:3000" 
@@ -226,7 +238,7 @@ export default function EventDetailPage() {
             
             <button
               className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
-              onClick={acessarLoja}
+              onClick={handleAccessStore}
             >
               Acessar Loja do Evento
             </button>

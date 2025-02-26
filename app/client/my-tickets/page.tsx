@@ -24,11 +24,25 @@ interface GroupedTickets {
   tickets: Ticket[];
 }
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: number;
+}
+
 export default function MyTickets() {
   const [groupedTickets, setGroupedTickets] = useState<GroupedTickets[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    // Recupera os dados do usuário logado do localStorage
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    
     // buyerId fixo para exemplo; em produção, use o ID do usuário autenticado
     fetch("https://localhost:7027/api/tickets/client/1")
       .then((res) => res.json())
@@ -129,7 +143,7 @@ export default function MyTickets() {
           <div className="flex-shrink-0 w-1/4 flex justify-end">
             <div className="flex items-center space-x-4">
               <div className="text-sm bg-gray-700 px-3 py-1 rounded-full">
-                Logado como: Cliente
+                Logado como: {user ? user.name : "Carregando..."}
               </div>
               <a 
                 href="http://localhost:3000" 
