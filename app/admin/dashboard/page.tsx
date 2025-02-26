@@ -21,6 +21,7 @@ interface EventFormValues {
   name: string;
   description?: string;
   date: string;
+  time: string; // Novo campo para o horário
   location: string;
   totalTickets: number;
   contactPhone?: string;
@@ -31,6 +32,7 @@ const eventSchema = z.object({
   name: z.string().min(1, { message: "Nome é obrigatório" }),
   description: z.string().optional(),
   date: z.string().min(1, { message: "Data é obrigatória" }),
+  time: z.string().min(1, { message: "Horário é obrigatório" }), // Validação para o horário
   location: z.string().min(1, { message: "Local é obrigatório" }),
   totalTickets: z.coerce.number({
     invalid_type_error: "Total de ingressos deve ser um número",
@@ -57,6 +59,7 @@ export default function NewEventPage() {
       name: "",
       description: "",
       date: "",
+      time: "", // Valor padrão para o horário
       location: "",
       totalTickets: 0,
       contactPhone: "",
@@ -81,15 +84,20 @@ export default function NewEventPage() {
     setIsSubmitting(true);
     
     try {
-      const localDate = new Date(data.date);
-      const utcDate = localDate.toISOString();
+      // Combina a data e o horário para criar um objeto de data completo
+      const [year, month, day] = data.date.split('-').map(Number);
+      const [hours, minutes] = data.time.split(':').map(Number);
+      
+      // Mês em JavaScript é 0-indexed (0-11), então subtraímos 1
+      const eventDateTime = new Date(year, month - 1, day, hours, minutes);
+      const utcDate = eventDateTime.toISOString();
 
       const response = await fetch("https://localhost:7027/api/Events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          date: utcDate,
+          date: utcDate, // Envia a data com o horário
           createdBy: user.id,
         }),
       });
@@ -200,8 +208,8 @@ export default function NewEventPage() {
                     />
                   </div>
 
-                  {/* Data e Local */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
+                  {/* Data, Horário e Local */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
                     <FormField
                       control={form.control}
                       name="date"
@@ -213,6 +221,25 @@ export default function NewEventPage() {
                           <FormControl>
                             <Input 
                               type="date" 
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            Horário
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="time" 
                               className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
                               {...field} 
                             />

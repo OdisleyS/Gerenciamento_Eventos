@@ -9,6 +9,10 @@ interface EventDetail {
   date: string;
   location: string;
   description: string;
+  contactPhone: string;
+  contactEmail: string;
+  totalTickets: number;
+  availableTickets: number;
   // ... demais campos do evento
 }
 
@@ -38,6 +42,39 @@ export default function EventDetailPage() {
       });
   }, [id]);
 
+  // Função para formatar apenas a data (DD/MM/AAAA)
+  const formatarData = (dataString: string) => {
+    try {
+      const data = new Date(dataString);
+      
+      // Formatar data para o padrão brasileiro
+      const dia = data.getDate().toString().padStart(2, '0');
+      const mes = (data.getMonth() + 1).toString().padStart(2, '0');
+      const ano = data.getFullYear();
+      
+      return `${dia}/${mes}/${ano}`;
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return "Data não disponível";
+    }
+  };
+
+  // Função para obter apenas a hora (HH:MM)
+  const formatarHora = (dataString: string) => {
+    try {
+      const data = new Date(dataString);
+      
+      // Formatar hora
+      const hora = data.getHours().toString().padStart(2, '0');
+      const minutos = data.getMinutes().toString().padStart(2, '0');
+      
+      return `${hora}:${minutos}`;
+    } catch (error) {
+      console.error("Erro ao formatar hora:", error);
+      return "Hora não disponível";
+    }
+  };
+
   const handleBuyTicket = async () => {
     if (!event) return;
 
@@ -65,6 +102,14 @@ export default function EventDetailPage() {
     }
   };
 
+  // Função para acessar a loja do evento
+  const acessarLoja = () => {
+    // Aqui você pode implementar a lógica para acessar a loja do evento
+    // Por exemplo, redirecionar para uma página de loja específica deste evento
+    alert("Redirecionando para a loja do evento...");
+    // router.push(`/client/events/${id}/store`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -83,45 +128,116 @@ export default function EventDetailPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
-      {/* Cabeçalho */}
-      <header className="bg-gray-800 text-white p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">Controle-SE</h1>
-          <nav className="flex space-x-4">
-            <a href="/client/events" className="hover:text-gray-300">Home</a>
-            <a href="/client/my-tickets" className="hover:text-gray-300">Meus Ingressos</a>
-          </nav>
-          <div className="text-sm">Logado como: Cliente</div>
+      {/* Header */}
+      <header className="bg-gray-800 text-white py-4 px-6 shadow-md">
+        <div className="container mx-auto flex items-center">
+          {/* Logo à esquerda */}
+          <div className="flex-shrink-0 w-1/4">
+            <h1 className="text-xl font-bold">Controle-SE</h1>
+          </div>
+          
+          {/* Menu centralizado */}
+          <div className="flex-grow flex justify-center">
+            <nav className="flex space-x-6">
+              <a 
+                href="/client/events" 
+                className="px-4 py-2 hover:bg-gray-700 rounded-md transition-colors"
+              >
+                Home
+              </a>
+              <a 
+                href="/client/my-tickets" 
+                className="px-4 py-2 hover:bg-gray-700 rounded-md transition-colors"
+              >
+                Meus Ingressos
+              </a>
+            </nav>
+          </div>
+          
+          {/* Área do usuário à direita */}
+          <div className="flex-shrink-0 w-1/4 flex justify-end">
+            <div className="flex items-center space-x-4">
+              <div className="text-sm bg-gray-700 px-3 py-1 rounded-full">
+                Logado como: Cliente
+              </div>
+              <a 
+                href="http://localhost:3000" 
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+              >
+                Sair
+              </a>
+            </div>
+          </div>
         </div>
       </header>
 
       {/* Conteúdo principal */}
       <main className="flex-grow container mx-auto py-8 px-4">
-        <div className="max-w-2xl mx-auto bg-white p-8 rounded shadow">
-          <h2 className="text-2xl font-bold mb-4">{event.name}</h2>
-          <p className="text-gray-700 mb-2"><strong>Data:</strong> {event.date}</p>
-          <p className="text-gray-700 mb-2"><strong>Local:</strong> {event.location}</p>
-          <p className="text-gray-700 mb-4"><strong>Descrição:</strong> {event.description}</p>
+        <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold mb-6 pb-2 border-b">{event.name}</h2>
+          
+          {/* Informações do Evento */}
+          <div className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold text-gray-800">Informações do Evento</h3>
+            <p className="text-gray-700">
+              <span className="font-medium">Data:</span> {formatarData(event.date)}
+            </p>
+            <p className="text-gray-700">
+              <span className="font-medium">Hora:</span> {formatarHora(event.date)}
+            </p>
+            <p className="text-gray-700">
+              <span className="font-medium">Local:</span> {event.location}
+            </p>
+            <p className="text-gray-700">
+              <span className="font-medium">Ingressos restantes:</span> {event.availableTickets}
+            </p>
+            <p className="text-gray-700">
+              <span className="font-medium">Descrição:</span> {event.description || "Sem descrição disponível"}
+            </p>
+          </div>
+          
+          {/* Informações de Contato */}
+          <div className="mt-6 pt-4 border-t space-y-4 mb-6">
+            <h3 className="text-lg font-semibold text-gray-800">Informações de Contato</h3>
+            {event.contactEmail && (
+              <p className="text-gray-700">
+                <span className="font-medium">Email:</span> {event.contactEmail}
+              </p>
+            )}
+            {event.contactPhone && (
+              <p className="text-gray-700">
+                <span className="font-medium">Telefone:</span> {event.contactPhone}
+              </p>
+            )}
+            {!event.contactEmail && !event.contactPhone && (
+              <p className="text-gray-500 italic">Nenhuma informação de contato disponível</p>
+            )}
+          </div>
 
-          {/* Botão de comprar ingresso */}
-          <button
-            className="mt-4 px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 transition-colors"
-            onClick={handleBuyTicket}
-          >
-            Comprar Ingresso
-          </button>
+          {/* Botões de ação */}
+          <div className="mt-8 pt-4 border-t flex justify-center space-x-4">
+            <button
+              className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
+              onClick={handleBuyTicket}
+              disabled={event.availableTickets <= 0}
+            >
+              {event.availableTickets > 0 ? "Comprar Ingresso" : "Ingressos Esgotados"}
+            </button>
+            
+            <button
+              className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
+              onClick={acessarLoja}
+            >
+              Acessar Loja do Evento
+            </button>
+          </div>
         </div>
       </main>
 
-      {/* Rodapé */}
-      <footer className="bg-gray-800 text-white p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <div>© 2024 Controle-SE</div>
-          <nav className="flex space-x-4">
-            <a href="#" className="hover:text-gray-300">Sobre</a>
-            <a href="#" className="hover:text-gray-300">Contato</a>
-            <a href="#" className="hover:text-gray-300">Ajuda</a>
-          </nav>
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white p-4 mt-8 shadow-inner">
+        <div className="container mx-auto text-center text-sm">
+          © 2024 Controle-SE
         </div>
       </footer>
     </div>
