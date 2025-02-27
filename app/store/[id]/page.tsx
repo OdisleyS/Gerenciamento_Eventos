@@ -40,6 +40,8 @@ export default function EventStorePage() {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearchActive, setIsSearchActive] = useState(false);
   
   const params = useParams();
   const router = useRouter();
@@ -133,34 +135,26 @@ export default function EventStorePage() {
     fetchEventData();
   }, [eventId]);
 
+  // Verifica se um produto está no carrinho
+  const isProductInCart = (productId: number) => {
+    return cart.some(item => item.product.id === productId);
+  };
+
   // Adiciona um produto ao carrinho
   const addToCart = (product: Product) => {
+    // Verificar se o produto já está no carrinho
+    if (isProductInCart(product.id)) {
+      return; // Se já estiver no carrinho, não faz nada
+    }
+    
     // Verificar se há estoque disponível
     if (product.quantity <= 0) {
       alert("Produto fora de estoque!");
       return;
     }
     
-    // Verificar se o produto já está no carrinho
-    const existingItem = cart.find(item => item.product.id === product.id);
-    
-    if (existingItem) {
-      // Se a quantidade desejada exceder o estoque, mostrar aviso
-      if (existingItem.quantity + 1 > product.quantity) {
-        alert("Quantidade máxima atingida para este produto!");
-        return;
-      }
-      
-      // Incrementar a quantidade do item existente
-      setCart(cart.map(item => 
-        item.product.id === product.id 
-          ? { ...item, quantity: item.quantity + 1 } 
-          : item
-      ));
-    } else {
-      // Adicionar novo item ao carrinho
-      setCart([...cart, { product, quantity: 1 }]);
-    }
+    // Adicionar novo item ao carrinho
+    setCart([...cart, { product, quantity: 1 }]);
   };
 
   // Remove um produto do carrinho
@@ -194,11 +188,22 @@ export default function EventStorePage() {
     }
   };
 
+  // Filtra produtos baseado no termo de pesquisa
+  const filteredProducts = products.filter(product => {
+    if (searchTerm === "") return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(searchLower) ||
+      (product.category && product.category.toLowerCase().includes(searchLower))
+    );
+  });
+
   // Agrupar produtos por categoria
   const groupProductsByCategory = () => {
     const groupedProducts: { [key: string]: Product[] } = {};
     
-    products.forEach(product => {
+    filteredProducts.forEach(product => {
       const category = product.category || 'Sem Categoria';
       if (!groupedProducts[category]) {
         groupedProducts[category] = [];
@@ -259,6 +264,27 @@ export default function EventStorePage() {
     }
   };
 
+  // Função para lidar com clique no botão de pesquisa
+  const toggleSearch = () => {
+    setIsSearchActive(!isSearchActive);
+    if (!isSearchActive) {
+      // Focar o input quando ativar a pesquisa
+      setTimeout(() => {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.focus();
+      }, 100);
+    } else {
+      // Limpar a pesquisa quando fechar
+      setSearchTerm("");
+    }
+  };
+
+  // Lidar com o fechamento da barra de pesquisa
+  const closeSearch = () => {
+    setIsSearchActive(false);
+    setSearchTerm("");
+  };
+
   const formatDate = (date: string) => {
     const options: Intl.DateTimeFormatOptions = { 
       day: '2-digit', 
@@ -278,12 +304,12 @@ export default function EventStorePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-purple-800 to-indigo-900">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-gray-800 to-gray-900">
         <div className="p-8 rounded-lg bg-white/10 backdrop-blur-lg shadow-2xl">
           <div className="flex items-center space-x-4">
-            <div className="w-3 h-3 bg-white rounded-full animate-bounce"></div>
-            <div className="w-3 h-3 bg-white rounded-full animate-bounce delay-75"></div>
-            <div className="w-3 h-3 bg-white rounded-full animate-bounce delay-150"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce delay-75"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce delay-150"></div>
           </div>
           <p className="text-white/80 mt-4">Carregando produtos...</p>
         </div>
@@ -292,43 +318,85 @@ export default function EventStorePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 text-white">
-      {/* Cabeçalho */}
-      <header className="sticky top-0 z-10 bg-black/30 backdrop-blur-md border-b border-white/10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          {/* Nome do evento como título da loja */}
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-            {event?.name || "Loja do Evento"}
-          </h1>
-          
-          <div className="flex items-center space-x-6">
-            {/* Botão do carrinho */}
-            <button
-              onClick={() => setShowCart(!showCart)}
-              className="relative p-2 text-white/80 hover:text-white transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-              </svg>
-              {cart.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-pink-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
-                  {cart.length}
-                </span>
-              )}
-            </button>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      {/* Cabeçalho com barra de pesquisa melhorada */}
+      <header className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 shadow-md">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Nome do evento como título da loja */}
+            <h1 className="text-2xl font-bold text-blue-400 whitespace-nowrap mr-4">
+              {event?.name || "Loja do Evento"}
+            </h1>
             
-            {/* Nome do usuário */}
-            <div className="text-sm bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full">
-              {user ? user.name : "Visitante"}
+            {/* Espaço flexível para garantir layout */}
+            <div className="flex-grow"></div>
+            
+            {/* Ações do usuário */}
+            <div className="flex items-center space-x-4">
+              {/* Barra de pesquisa ao lado do carrinho */}
+              <div className="relative">
+                <div className={`flex items-center overflow-hidden transition-all duration-300 ${isSearchActive ? 'w-48' : 'w-10'} bg-gray-800 rounded-full`}>
+                  <button 
+                    onClick={toggleSearch}
+                    className="p-2 rounded-full text-gray-400 hover:text-blue-400 transition-colors"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </button>
+                  
+                  {isSearchActive && (
+                    <input
+                      id="search-input"
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Buscar..."
+                      className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-white text-sm pr-8"
+                    />
+                  )}
+                </div>
+                
+                {isSearchActive && searchTerm && (
+                  <button 
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                )}
+              </div>
+              
+              {/* Botão do carrinho */}
+              <button
+                onClick={() => setShowCart(!showCart)}
+                className="relative p-2 text-white/80 hover:text-blue-400 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-blue-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center">
+                    {cart.length}
+                  </span>
+                )}
+              </button>
+              
+              {/* Nome do usuário */}
+              <div className="text-sm bg-gray-800 px-3 py-1 rounded-full border border-gray-700">
+                {user ? user.name : "Visitante"}
+              </div>
+              
+              {/* Voltar para o site principal */}
+              <a 
+                href="/client/events" 
+                className="text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-full border border-gray-700 transition-colors"
+              >
+                Voltar
+              </a>
             </div>
-            
-            {/* Voltar para o site principal */}
-            <a 
-              href="/client/events" 
-              className="text-sm bg-white/10 hover:bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full transition-colors"
-            >
-              Voltar
-            </a>
           </div>
         </div>
       </header>
@@ -336,28 +404,61 @@ export default function EventStorePage() {
       {/* Lista de produtos agrupados por categoria */}
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-xl font-bold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-            Produtos Disponíveis
-          </h2>
+          <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-2">
+            <h2 className="text-xl font-bold text-blue-400">
+              Produtos Disponíveis
+            </h2>
+            {searchTerm && (
+              <div className="text-sm text-gray-400">
+                Resultados para: <span className="text-white font-medium">"{searchTerm}"</span>
+                <button 
+                  onClick={() => setSearchTerm("")}
+                  className="ml-2 text-blue-400 hover:text-blue-300 underline text-xs"
+                >
+                  Limpar
+                </button>
+              </div>
+            )}
+          </div>
           
-          {products.length === 0 ? (
-            <div className="bg-white/10 backdrop-blur-md rounded-lg p-8 text-center border border-white/10">
-              <svg className="w-16 h-16 mx-auto text-white/40 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-              </svg>
-              <p className="text-white/80">Nenhum produto disponível para este evento.</p>
+          {filteredProducts.length === 0 ? (
+            <div className="bg-gray-800 rounded-lg p-8 text-center border border-gray-700">
+              {products.length === 0 ? (
+                <>
+                  <svg className="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                  </svg>
+                  <p className="text-gray-400">Nenhum produto disponível para este evento.</p>
+                </>
+              ) : (
+                <>
+                  <svg className="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                  <p className="text-gray-400">Nenhum produto encontrado para "<span className="font-semibold">{searchTerm}</span>".</p>
+                  <button 
+                    onClick={() => {
+                      setSearchTerm("");
+                      setIsSearchActive(false);
+                    }} 
+                    className="mt-4 text-blue-400 hover:text-blue-300 underline"
+                  >
+                    Limpar pesquisa
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-10">
               {getSortedCategories().map((category) => (
                 <div key={category} className="mb-8">
-                  <h3 className="text-lg font-semibold mb-4 px-2 py-1 bg-white/10 backdrop-blur-sm rounded-lg inline-block">
+                  <h3 className="text-lg font-semibold mb-4 px-3 py-2 bg-gray-800 border-l-4 border-blue-500 rounded-r-lg inline-block">
                     {category}
                   </h3>
                   
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {groupProductsByCategory()[category].map((product) => (
-                      <div key={product.id} className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden border border-white/10 transition-all hover:shadow-lg hover:shadow-purple-500/20 group">
+                      <div key={product.id} className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 transition-all hover:shadow-lg hover:shadow-blue-900/20 group">
                         <div className="h-48 overflow-hidden relative">
                           <img 
                             src={product.imageUrl || '/api/placeholder/200/200'} 
@@ -367,7 +468,7 @@ export default function EventStorePage() {
                           />
                           {product.quantity <= 0 && (
                             <div className="absolute inset-0 bg-black/75 flex items-center justify-center backdrop-blur-sm">
-                              <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                              <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
                                 Esgotado
                               </span>
                             </div>
@@ -378,25 +479,33 @@ export default function EventStorePage() {
                             {product.name}
                           </h3>
                           <div className="flex justify-between items-center mb-3">
-                            <span className="text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                            <span className="text-xl font-bold text-blue-400">
                               R$ {product.price.toFixed(2).replace('.', ',')}
                             </span>
                             {product.quantity > 0 && (
-                              <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-white/80">
+                              <span className="text-xs bg-gray-700 px-2 py-1 rounded-full text-gray-300">
                                 {product.quantity} disponíveis
                               </span>
                             )}
                           </div>
+                          {/* Botão de adicionar ao carrinho com estado diferente quando já adicionado */}
                           <button
                             onClick={() => addToCart(product)}
-                            disabled={product.quantity <= 0}
+                            disabled={product.quantity <= 0 || isProductInCart(product.id)}
                             className={`w-full py-2 rounded-lg text-white text-sm font-medium transition-all ${
-                              product.quantity > 0 
-                                ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:shadow-md hover:shadow-purple-500/30' 
-                                : 'bg-white/20 cursor-not-allowed'
+                              product.quantity <= 0 
+                                ? 'bg-gray-700 cursor-not-allowed'
+                                : isProductInCart(product.id)
+                                  ? 'bg-green-600 cursor-not-allowed'
+                                  : 'bg-blue-600 hover:bg-blue-700'
                             }`}
                           >
-                            {product.quantity > 0 ? 'Adicionar ao Carrinho' : 'Esgotado'}
+                            {product.quantity <= 0 
+                              ? 'Esgotado' 
+                              : isProductInCart(product.id) 
+                                ? 'Adicionado ✓' 
+                                : 'Adicionar ao Carrinho'
+                            }
                           </button>
                         </div>
                       </div>
@@ -412,12 +521,12 @@ export default function EventStorePage() {
       {/* Modal do Carrinho */}
       {showCart && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-xl w-full max-w-md max-h-[90vh] flex flex-col border border-white/10 shadow-2xl">
-            <div className="p-4 border-b border-white/10 flex justify-between items-center">
-              <h2 className="text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">Seu Carrinho</h2>
+          <div className="bg-gray-900 rounded-lg w-full max-w-md max-h-[90vh] flex flex-col border border-gray-700 shadow-2xl">
+            <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-blue-400">Seu Carrinho</h2>
               <button
                 onClick={() => setShowCart(false)}
-                className="p-1 hover:bg-white/10 rounded-full text-white/80 hover:text-white transition-colors"
+                className="p-1 hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -429,16 +538,16 @@ export default function EventStorePage() {
             <div className="p-4 flex-1 overflow-y-auto">
               {cart.length === 0 ? (
                 <div className="text-center py-10">
-                  <svg className="w-16 h-16 mx-auto text-white/40 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                   </svg>
-                  <p className="text-white/80">Seu carrinho está vazio</p>
+                  <p className="text-gray-400">Seu carrinho está vazio</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {cart.map((item) => (
-                    <div key={item.product.id} className="flex items-center border-b border-white/10 pb-4">
-                      <div className="w-16 h-16 flex-shrink-0 mr-4 overflow-hidden rounded-lg bg-white/10">
+                    <div key={item.product.id} className="flex items-center border-b border-gray-700 pb-4">
+                      <div className="w-16 h-16 flex-shrink-0 mr-4 overflow-hidden rounded-lg bg-gray-800">
                         <img
                           src={item.product.imageUrl || '/api/placeholder/80/80'}
                           alt={item.product.name}
@@ -450,28 +559,28 @@ export default function EventStorePage() {
                         <h3 className="font-medium truncate" title={item.product.name}>
                           {item.product.name}
                         </h3>
-                        <p className="text-sm bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent font-semibold">
+                        <p className="text-sm text-blue-400 font-semibold">
                           R$ {item.product.price.toFixed(2).replace('.', ',')}
                         </p>
                       </div>
                       <div className="flex items-center">
                         <button
                           onClick={() => updateCartItemQuantity(item.product.id, item.quantity - 1)}
-                          className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 text-sm transition-colors"
+                          className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 text-sm transition-colors"
                         >
                           -
                         </button>
                         <span className="mx-2 w-5 text-center">{item.quantity}</span>
                         <button
                           onClick={() => updateCartItemQuantity(item.product.id, item.quantity + 1)}
-                          className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 text-sm transition-colors"
+                          className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 text-sm transition-colors"
                         >
                           +
                         </button>
                       </div>
                       <button
                         onClick={() => removeFromCart(item.product.id)}
-                        className="ml-2 text-white/60 hover:text-pink-500 transition-colors"
+                        className="ml-2 text-gray-500 hover:text-red-500 transition-colors"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -484,17 +593,17 @@ export default function EventStorePage() {
             </div>
 
             {/* Rodapé do carrinho com total e ações */}
-            <div className="border-t border-white/10 p-4 bg-black/20">
+            <div className="border-t border-gray-700 p-4 bg-gray-800">
               <div className="flex justify-between items-center mb-4">
                 <span className="font-medium">Total:</span>
-                <span className="font-bold text-xl bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                <span className="font-bold text-xl text-blue-400">
                   R$ {calculateTotal().toFixed(2).replace('.', ',')}
                 </span>
               </div>
               <div className="flex space-x-3">
                 <button
                   onClick={() => setShowCart(false)}
-                  className="flex-1 py-2 border border-white/20 rounded-lg text-white/90 text-sm font-medium hover:bg-white/10 transition-colors"
+                  className="flex-1 py-2 border border-gray-600 rounded-lg text-white text-sm font-medium hover:bg-gray-700 transition-colors"
                 >
                   Continuar Comprando
                 </button>
@@ -503,8 +612,8 @@ export default function EventStorePage() {
                   disabled={cart.length === 0}
                   className={`flex-1 py-2 rounded-lg text-white text-sm font-medium transition-all ${
                     cart.length > 0 
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:shadow-md hover:shadow-purple-500/30' 
-                      : 'bg-white/20 cursor-not-allowed'
+                      ? 'bg-blue-600 hover:bg-blue-700' 
+                      : 'bg-gray-700 cursor-not-allowed'
                   }`}
                 >
                   Finalizar Compra
@@ -516,8 +625,8 @@ export default function EventStorePage() {
       )}
 
       {/* Rodapé */}
-      <footer className="py-4 bg-black/30 backdrop-blur-md border-t border-white/10">
-        <div className="container mx-auto px-4 text-center text-xs text-white/60">
+      <footer className="py-4 bg-gray-900 border-t border-gray-800">
+        <div className="container mx-auto px-4 text-center text-xs text-gray-500">
           © 2024 {event?.name || "Loja do Evento"} - Todos os direitos reservados
         </div>
       </footer>
