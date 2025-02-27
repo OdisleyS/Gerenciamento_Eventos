@@ -46,6 +46,7 @@ interface EventProduct {
   name: string;
   price: number;
   quantity: number;
+  category: string;
   imageUrl: string;
   tempId?: string; // Para novos itens antes de salvar
 }
@@ -93,7 +94,7 @@ export default function AdminEventsPage() {
     }
   });
   const [newStaffMember, setNewStaffMember] = useState<EventStaff>({ name: '', email: '', password: '' });
-  const [newProduct, setNewProduct] = useState<EventProduct>({ name: '', price: 0, quantity: 0, imageUrl: '' });
+  const [newProduct, setNewProduct] = useState<EventProduct>({ name: '', price: 0, quantity: 0, imageUrl: '', category: '' });
   const [newNotificationEmail, setNewNotificationEmail] = useState('');
   const [newNotificationPhone, setNewNotificationPhone] = useState('');
   const [settingsLoading, setSettingsLoading] = useState(false);
@@ -127,20 +128,20 @@ export default function AdminEventsPage() {
   // Função para carregar configurações do evento a partir da API
   const fetchEventSettings = async (eventId: number) => {
     setSettingsLoading(true);
-    
+
     try {
       const response = await fetch(`https://localhost:7027/api/EventSettings/${eventId}`);
-      
+
       if (!response.ok) {
         throw new Error(`Erro ao carregar configurações: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Processar notificações para o formato necessário
       const emails: string[] = [];
       const phones: string[] = [];
-      
+
       // Mapear notificações para as listas correspondentes
       if (data.notifications) {
         data.notifications.forEach((notification: any) => {
@@ -151,20 +152,20 @@ export default function AdminEventsPage() {
           }
         });
       }
-      
+
       // Mapear produtos para ter imageUrl em vez de imageData
       const processedProducts = data.products ? data.products.map((product: any) => {
         // Criar URL para a imagem ou usar placeholder
-        const imageUrl = product.imageData 
+        const imageUrl = product.imageData
           ? `data:image/jpeg;base64,${btoa(String.fromCharCode(...new Uint8Array(product.imageData)))}`
           : '/api/placeholder/80/80';
-          
+
         return {
           ...product,
           imageUrl
         };
       }) : [];
-      
+
       const settings: EventSettings = {
         staff: data.staff || [],
         products: processedProducts,
@@ -173,7 +174,7 @@ export default function AdminEventsPage() {
           phones
         }
       };
-      
+
       setEventSettings(settings);
     } catch (error) {
       console.error("Erro ao carregar configurações do evento:", error);
@@ -227,7 +228,7 @@ export default function AdminEventsPage() {
   // Função para adicionar novo funcionário
   const handleAddStaff = async () => {
     if (!currentEvent) return;
-    
+
     if (!newStaffMember.name || !newStaffMember.email || !newStaffMember.password) {
       alert('Preencha todos os campos do funcionário');
       return;
@@ -247,7 +248,7 @@ export default function AdminEventsPage() {
       }
 
       const newStaff = await response.json();
-      
+
       setEventSettings(prev => ({
         ...prev,
         staff: [...prev.staff, newStaff]
@@ -298,8 +299,8 @@ export default function AdminEventsPage() {
   // Função para adicionar novo produto
   const handleAddProduct = async () => {
     if (!currentEvent) return;
-    
-    if (!newProduct.name || newProduct.price <= 0 || newProduct.quantity <= 0) {
+
+    if (!newProduct.name || newProduct.price <= 0 || newProduct.quantity <= 0 || ! newProduct.category) {
       alert('Preencha todos os campos do produto corretamente');
       return;
     }
@@ -310,7 +311,8 @@ export default function AdminEventsPage() {
       formData.append('name', newProduct.name);
       formData.append('price', newProduct.price.toString());
       formData.append('quantity', newProduct.quantity.toString());
-      
+      formData.append('category', newProduct.category);
+
       // Verificar se há um arquivo de imagem para upload
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
       if (fileInput && fileInput.files && fileInput.files.length > 0) {
@@ -330,7 +332,7 @@ export default function AdminEventsPage() {
       }
 
       const newProductData = await response.json();
-      
+
       // Criar URL para exibição da imagem
       const displayProduct = {
         ...newProductData,
@@ -343,7 +345,7 @@ export default function AdminEventsPage() {
       }));
 
       // Limpa o formulário
-      setNewProduct({ name: '', price: 0, quantity: 0, imageUrl: '' });
+      setNewProduct({ name: '', price: 0, quantity: 0, imageUrl: '', category: '' });
       if (fileInput) fileInput.value = '';
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
@@ -388,7 +390,7 @@ export default function AdminEventsPage() {
   // Função para adicionar email de notificação
   const handleAddNotificationEmail = async () => {
     if (!currentEvent) return;
-    
+
     if (!newNotificationEmail || !newNotificationEmail.includes('@')) {
       alert('Insira um email válido');
       return;
@@ -416,7 +418,7 @@ export default function AdminEventsPage() {
       }
 
       const newNotification = await response.json();
-      
+
       // Atualizar o estado local
       setEventSettings(prev => ({
         ...prev,
@@ -436,17 +438,17 @@ export default function AdminEventsPage() {
   // Função para remover email de notificação
   const handleRemoveNotificationEmail = async (email: string) => {
     if (!currentEvent) return;
-    
+
     try {
       // Primeiro precisamos encontrar o ID da notificação associada a este email
       const response = await fetch(`https://localhost:7027/api/EventSettings/${currentEvent.id}`);
       if (!response.ok) {
         throw new Error(`Erro ao buscar notificações: ${response.status}`);
       }
-      
+
       const data = await response.json();
       const notification = data.notifications?.find((n: any) => n.type === 'email' && n.value === email);
-      
+
       if (!notification) {
         console.error("Notificação não encontrada para remoção");
         // Ainda assim atualiza a UI para manter consistência
@@ -459,7 +461,7 @@ export default function AdminEventsPage() {
         }));
         return;
       }
-      
+
       // Agora que temos o ID, podemos remover a notificação
       const deleteResponse = await fetch(`https://localhost:7027/api/EventSettings/notifications/${notification.id}`, {
         method: 'DELETE'
@@ -486,7 +488,7 @@ export default function AdminEventsPage() {
   // Função para adicionar telefone de notificação
   const handleAddNotificationPhone = async () => {
     if (!currentEvent) return;
-    
+
     if (!newNotificationPhone) {
       alert('Insira um telefone válido');
       return;
@@ -514,7 +516,7 @@ export default function AdminEventsPage() {
       }
 
       const newNotification = await response.json();
-      
+
       // Atualizar o estado local
       setEventSettings(prev => ({
         ...prev,
@@ -534,17 +536,17 @@ export default function AdminEventsPage() {
   // Função para remover telefone de notificação
   const handleRemoveNotificationPhone = async (phone: string) => {
     if (!currentEvent) return;
-    
+
     try {
       // Primeiro precisamos encontrar o ID da notificação associada a este telefone
       const response = await fetch(`https://localhost:7027/api/EventSettings/${currentEvent.id}`);
       if (!response.ok) {
         throw new Error(`Erro ao buscar notificações: ${response.status}`);
       }
-      
+
       const data = await response.json();
       const notification = data.notifications?.find((n: any) => n.type === 'phone' && n.value === phone);
-      
+
       if (!notification) {
         console.error("Notificação não encontrada para remoção");
         // Ainda assim atualiza a UI para manter consistência
@@ -557,7 +559,7 @@ export default function AdminEventsPage() {
         }));
         return;
       }
-      
+
       // Agora que temos o ID, podemos remover a notificação
       const deleteResponse = await fetch(`https://localhost:7027/api/EventSettings/notifications/${notification.id}`, {
         method: 'DELETE'
@@ -584,24 +586,22 @@ export default function AdminEventsPage() {
   // Função para salvar todas as configurações
   const handleSaveSettings = async () => {
     if (!currentEvent) return;
-    
+
     // Todas as operações individuais (adicionar/remover staff, produtos, notificações)
     // já estão sendo realizadas diretamente nas funções específicas, então não é necessário
     // fazer nenhuma operação adicional aqui, apenas fechar o modal.
-    
+
     alert('Todas as alterações foram salvas com sucesso!');
     setShowSettingsModal(false);
   };
 
   // Função para acessar a loja do evento
+  // Função para acessar a loja do evento
   const handleAccessStore = () => {
     if (!currentEvent) return;
-    
-    // Redirecionando para a página da loja (quando estiver implementada)
-    alert(`A loja do evento "${currentEvent.name}" está em construção e estará disponível em breve!`);
-    
-    // Quando a loja estiver implementada, você pode descomentar esta linha:
-    // router.push(`/store/${currentEvent.id}`);
+
+    // Redirecionando para a página da loja implementada
+    router.push(`/store/${currentEvent.id}`);
   };
 
   // Função para exportar/baixar relatório do evento
@@ -763,24 +763,24 @@ export default function AdminEventsPage() {
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    
+
     // A imagem será enviada junto com os outros dados do produto no handleAddProduct
     // portanto, não precisamos fazer nada aqui além de possivelmente validar o arquivo
-    
+
     // Verificar se o arquivo é uma imagem
     if (!file.type.startsWith('image/')) {
       alert('Por favor, selecione um arquivo de imagem válido.');
       e.target.value = ''; // Limpar o input
       return;
     }
-    
+
     // Verificar tamanho do arquivo (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('A imagem é muito grande. Por favor, selecione uma imagem com menos de 5MB.');
       e.target.value = ''; // Limpar o input
       return;
     }
-    
+
     // Você pode mostrar uma pré-visualização da imagem se quiser
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -1296,6 +1296,7 @@ export default function AdminEventsPage() {
                               <th className="py-2 px-4 font-semibold">Nome</th>
                               <th className="py-2 px-4 font-semibold">Preço</th>
                               <th className="py-2 px-4 font-semibold">Quantidade</th>
+                              <th className="py-2 px-4 font-semibold">Categoria</th>
                               <th className="py-2 px-4 font-semibold text-center">Ações</th>
                             </tr>
                           </thead>
@@ -1312,6 +1313,7 @@ export default function AdminEventsPage() {
                                 <td className="py-2 px-4">{product.name}</td>
                                 <td className="py-2 px-4">R$ {product.price.toFixed(2)}</td>
                                 <td className="py-2 px-4">{product.quantity}</td>
+                                <td className="py-2 px-4">{product.category}</td>
                                 <td className="py-2 px-4 text-center">
                                   <button
                                     onClick={() => handleRemoveProduct(product.id || product.tempId)}
@@ -1383,6 +1385,17 @@ export default function AdminEventsPage() {
                               accept="image/*"
                               onChange={handleImageUpload}
                               className="w-full p-2 border border-gray-300 rounded"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1 text-gray-700">Categoria</label>
+                            <input
+                              type="text"
+                              name="category"
+                              value={newProduct.category}
+                              onChange={handleProductChange}
+                              className="w-full p-2 border border-gray-300 rounded"
+                              placeholder="Categoria do produto"
                             />
                           </div>
                         </div>
