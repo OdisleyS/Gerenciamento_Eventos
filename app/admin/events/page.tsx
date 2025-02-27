@@ -124,32 +124,71 @@ export default function AdminEventsPage() {
     fetchEvents();
   }, []);
 
-  // Função simulada para carregar configurações do evento
+  // Função para carregar configurações do evento a partir da API
   const fetchEventSettings = async (eventId: number) => {
     setSettingsLoading(true);
-
-    // Aqui seria feito um fetch para o backend
-    // Para o protótipo, usaremos dados mockados
-    setTimeout(() => {
-      // Dados mockados para protótipo
-      const mockSettings: EventSettings = {
-        staff: [
-          { id: 1, name: 'João Silva', email: 'joao@exemplo.com', password: '******' },
-          { id: 2, name: 'Maria Oliveira', email: 'maria@exemplo.com', password: '******' }
-        ],
-        products: [
-          { id: 1, name: 'Camiseta do Evento', price: 35.90, quantity: 100, imageUrl: '/api/placeholder/80/80' },
-          { id: 2, name: 'Boné', price: 29.90, quantity: 50, imageUrl: '/api/placeholder/80/80' }
-        ],
+    
+    try {
+      const response = await fetch(`https://localhost:7027/api/EventSettings/${eventId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao carregar configurações: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Processar notificações para o formato necessário
+      const emails: string[] = [];
+      const phones: string[] = [];
+      
+      // Mapear notificações para as listas correspondentes
+      if (data.notifications) {
+        data.notifications.forEach((notification: any) => {
+          if (notification.type === "email") {
+            emails.push(notification.value);
+          } else if (notification.type === "phone") {
+            phones.push(notification.value);
+          }
+        });
+      }
+      
+      // Mapear produtos para ter imageUrl em vez de imageData
+      const processedProducts = data.products ? data.products.map((product: any) => {
+        // Criar URL para a imagem ou usar placeholder
+        const imageUrl = product.imageData 
+          ? `data:image/jpeg;base64,${btoa(String.fromCharCode(...new Uint8Array(product.imageData)))}`
+          : '/api/placeholder/80/80';
+          
+        return {
+          ...product,
+          imageUrl
+        };
+      }) : [];
+      
+      const settings: EventSettings = {
+        staff: data.staff || [],
+        products: processedProducts,
         notifications: {
-          emails: ['notificacao@evento.com', 'admin@evento.com'],
-          phones: ['(11) 98765-4321', '(11) 91234-5678']
+          emails,
+          phones
         }
       };
-
-      setEventSettings(mockSettings);
+      
+      setEventSettings(settings);
+    } catch (error) {
+      console.error("Erro ao carregar configurações do evento:", error);
+      // Falhar graciosamente com dados vazios
+      setEventSettings({
+        staff: [],
+        products: [],
+        notifications: {
+          emails: [],
+          phones: []
+        }
+      });
+    } finally {
       setSettingsLoading(false);
-    }, 1000);
+    }
   };
 
   // Função para calcular total de ingressos vendidos corretamente
@@ -186,77 +225,170 @@ export default function AdminEventsPage() {
   };
 
   // Função para adicionar novo funcionário
-  const handleAddStaff = () => {
+  const handleAddStaff = async () => {
+    if (!currentEvent) return;
+    
     if (!newStaffMember.name || !newStaffMember.email || !newStaffMember.password) {
       alert('Preencha todos os campos do funcionário');
       return;
     }
 
-    // Adiciona um ID temporário para facilitar a remoção antes de salvar no banco
-    const staffWithTempId = {
-      ...newStaffMember,
-      tempId: Date.now().toString()
-    };
+    try {
+      const response = await fetch(`https://localhost:7027/api/EventSettings/${currentEvent.id}/staff`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newStaffMember)
+      });
 
-    setEventSettings(prev => ({
-      ...prev,
-      staff: [...prev.staff, staffWithTempId]
-    }));
+      if (!response.ok) {
+        throw new Error(`Erro ao adicionar funcionário: ${response.status}`);
+      }
 
-    // Limpa o formulário
-    setNewStaffMember({ name: '', email: '', password: '' });
+      const newStaff = await response.json();
+      
+      setEventSettings(prev => ({
+        ...prev,
+        staff: [...prev.staff, newStaff]
+      }));
+
+      // Limpa o formulário
+      setNewStaffMember({ name: '', email: '', password: '' });
+    } catch (error) {
+      console.error("Erro ao adicionar funcionário:", error);
+      alert("Erro ao adicionar funcionário. Tente novamente.");
+    }
   };
 
   // Função para remover funcionário
-  const handleRemoveStaff = (staffId: number | string | undefined) => {
+  const handleRemoveStaff = async (staffId: number | string | undefined) => {
     if (!staffId) return;
 
-    setEventSettings(prev => ({
-      ...prev,
-      staff: prev.staff.filter(staff =>
-        (staff.id !== staffId && staff.tempId !== staffId)
-      )
-    }));
+    try {
+      // Verificar se é um ID temporário (não foi salvo no servidor ainda)
+      if (typeof staffId === 'string' && staffId.toString().startsWith('temp')) {
+        setEventSettings(prev => ({
+          ...prev,
+          staff: prev.staff.filter(staff => staff.tempId !== staffId)
+        }));
+        return;
+      }
+
+      // Fazer a requisição DELETE para o backend
+      const response = await fetch(`https://localhost:7027/api/EventSettings/staff/${staffId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao remover funcionário: ${response.status}`);
+      }
+
+      // Atualizar o estado local após remoção bem-sucedida
+      setEventSettings(prev => ({
+        ...prev,
+        staff: prev.staff.filter(staff => staff.id !== staffId)
+      }));
+    } catch (error) {
+      console.error("Erro ao remover funcionário:", error);
+      alert("Erro ao remover funcionário. Tente novamente.");
+    }
   };
 
   // Função para adicionar novo produto
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
+    if (!currentEvent) return;
+    
     if (!newProduct.name || newProduct.price <= 0 || newProduct.quantity <= 0) {
       alert('Preencha todos os campos do produto corretamente');
       return;
     }
 
-    // Adiciona um ID temporário
-    const productWithTempId = {
-      ...newProduct,
-      tempId: Date.now().toString(),
-      // Se não tiver imagem, usa um placeholder
-      imageUrl: newProduct.imageUrl || '/api/placeholder/80/80'
-    };
+    try {
+      // Criar um FormData para envio de arquivo
+      const formData = new FormData();
+      formData.append('name', newProduct.name);
+      formData.append('price', newProduct.price.toString());
+      formData.append('quantity', newProduct.quantity.toString());
+      
+      // Verificar se há um arquivo de imagem para upload
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        formData.append('file', fileInput.files[0]);
+      } else {
+        alert('Selecione uma imagem para o produto');
+        return;
+      }
 
-    setEventSettings(prev => ({
-      ...prev,
-      products: [...prev.products, productWithTempId]
-    }));
+      const response = await fetch(`https://localhost:7027/api/EventSettings/products/${currentEvent.id}`, {
+        method: 'POST',
+        body: formData
+      });
 
-    // Limpa o formulário
-    setNewProduct({ name: '', price: 0, quantity: 0, imageUrl: '' });
+      if (!response.ok) {
+        throw new Error(`Erro ao adicionar produto: ${response.status}`);
+      }
+
+      const newProductData = await response.json();
+      
+      // Criar URL para exibição da imagem
+      const displayProduct = {
+        ...newProductData,
+        imageUrl: '/api/placeholder/80/80' // Placeholder até que a imagem seja carregada corretamente
+      };
+
+      setEventSettings(prev => ({
+        ...prev,
+        products: [...prev.products, displayProduct]
+      }));
+
+      // Limpa o formulário
+      setNewProduct({ name: '', price: 0, quantity: 0, imageUrl: '' });
+      if (fileInput) fileInput.value = '';
+    } catch (error) {
+      console.error("Erro ao adicionar produto:", error);
+      alert("Erro ao adicionar produto. Tente novamente.");
+    }
   };
 
   // Função para remover produto
-  const handleRemoveProduct = (productId: number | string | undefined) => {
+  const handleRemoveProduct = async (productId: number | string | undefined) => {
     if (!productId) return;
 
-    setEventSettings(prev => ({
-      ...prev,
-      products: prev.products.filter(product =>
-        (product.id !== productId && product.tempId !== productId)
-      )
-    }));
+    try {
+      // Verificar se é um ID temporário (não foi salvo no servidor ainda)
+      if (typeof productId === 'string' && productId.toString().startsWith('temp')) {
+        setEventSettings(prev => ({
+          ...prev,
+          products: prev.products.filter(product => product.tempId !== productId)
+        }));
+        return;
+      }
+
+      // Fazer a requisição DELETE para o backend
+      const response = await fetch(`https://localhost:7027/api/EventSettings/products/${productId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao remover produto: ${response.status}`);
+      }
+
+      // Atualizar o estado local após remoção bem-sucedida
+      setEventSettings(prev => ({
+        ...prev,
+        products: prev.products.filter(product => product.id !== productId)
+      }));
+    } catch (error) {
+      console.error("Erro ao remover produto:", error);
+      alert("Erro ao remover produto. Tente novamente.");
+    }
   };
 
   // Função para adicionar email de notificação
-  const handleAddNotificationEmail = () => {
+  const handleAddNotificationEmail = async () => {
+    if (!currentEvent) return;
+    
     if (!newNotificationEmail || !newNotificationEmail.includes('@')) {
       alert('Insira um email válido');
       return;
@@ -267,30 +399,94 @@ export default function AdminEventsPage() {
       return;
     }
 
-    setEventSettings(prev => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        emails: [...prev.notifications.emails, newNotificationEmail]
-      }
-    }));
+    try {
+      const response = await fetch(`https://localhost:7027/api/EventSettings/${currentEvent.id}/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'email',
+          value: newNotificationEmail
+        })
+      });
 
-    setNewNotificationEmail('');
+      if (!response.ok) {
+        throw new Error(`Erro ao adicionar notificação: ${response.status}`);
+      }
+
+      const newNotification = await response.json();
+      
+      // Atualizar o estado local
+      setEventSettings(prev => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          emails: [...prev.notifications.emails, newNotificationEmail]
+        }
+      }));
+
+      setNewNotificationEmail('');
+    } catch (error) {
+      console.error("Erro ao adicionar email de notificação:", error);
+      alert("Erro ao adicionar email de notificação. Tente novamente.");
+    }
   };
 
   // Função para remover email de notificação
-  const handleRemoveNotificationEmail = (email: string) => {
-    setEventSettings(prev => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        emails: prev.notifications.emails.filter(e => e !== email)
+  const handleRemoveNotificationEmail = async (email: string) => {
+    if (!currentEvent) return;
+    
+    try {
+      // Primeiro precisamos encontrar o ID da notificação associada a este email
+      const response = await fetch(`https://localhost:7027/api/EventSettings/${currentEvent.id}`);
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar notificações: ${response.status}`);
       }
-    }));
+      
+      const data = await response.json();
+      const notification = data.notifications?.find((n: any) => n.type === 'email' && n.value === email);
+      
+      if (!notification) {
+        console.error("Notificação não encontrada para remoção");
+        // Ainda assim atualiza a UI para manter consistência
+        setEventSettings(prev => ({
+          ...prev,
+          notifications: {
+            ...prev.notifications,
+            emails: prev.notifications.emails.filter(e => e !== email)
+          }
+        }));
+        return;
+      }
+      
+      // Agora que temos o ID, podemos remover a notificação
+      const deleteResponse = await fetch(`https://localhost:7027/api/EventSettings/notifications/${notification.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!deleteResponse.ok) {
+        throw new Error(`Erro ao remover notificação: ${deleteResponse.status}`);
+      }
+
+      // Atualizar o estado local
+      setEventSettings(prev => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          emails: prev.notifications.emails.filter(e => e !== email)
+        }
+      }));
+    } catch (error) {
+      console.error("Erro ao remover email de notificação:", error);
+      alert("Erro ao remover email de notificação. Tente novamente.");
+    }
   };
 
   // Função para adicionar telefone de notificação
-  const handleAddNotificationPhone = () => {
+  const handleAddNotificationPhone = async () => {
+    if (!currentEvent) return;
+    
     if (!newNotificationPhone) {
       alert('Insira um telefone válido');
       return;
@@ -301,38 +497,111 @@ export default function AdminEventsPage() {
       return;
     }
 
-    setEventSettings(prev => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        phones: [...prev.notifications.phones, newNotificationPhone]
-      }
-    }));
+    try {
+      const response = await fetch(`https://localhost:7027/api/EventSettings/${currentEvent.id}/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'phone',
+          value: newNotificationPhone
+        })
+      });
 
-    setNewNotificationPhone('');
+      if (!response.ok) {
+        throw new Error(`Erro ao adicionar notificação: ${response.status}`);
+      }
+
+      const newNotification = await response.json();
+      
+      // Atualizar o estado local
+      setEventSettings(prev => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          phones: [...prev.notifications.phones, newNotificationPhone]
+        }
+      }));
+
+      setNewNotificationPhone('');
+    } catch (error) {
+      console.error("Erro ao adicionar telefone de notificação:", error);
+      alert("Erro ao adicionar telefone de notificação. Tente novamente.");
+    }
   };
 
   // Função para remover telefone de notificação
-  const handleRemoveNotificationPhone = (phone: string) => {
-    setEventSettings(prev => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        phones: prev.notifications.phones.filter(p => p !== phone)
+  const handleRemoveNotificationPhone = async (phone: string) => {
+    if (!currentEvent) return;
+    
+    try {
+      // Primeiro precisamos encontrar o ID da notificação associada a este telefone
+      const response = await fetch(`https://localhost:7027/api/EventSettings/${currentEvent.id}`);
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar notificações: ${response.status}`);
       }
-    }));
+      
+      const data = await response.json();
+      const notification = data.notifications?.find((n: any) => n.type === 'phone' && n.value === phone);
+      
+      if (!notification) {
+        console.error("Notificação não encontrada para remoção");
+        // Ainda assim atualiza a UI para manter consistência
+        setEventSettings(prev => ({
+          ...prev,
+          notifications: {
+            ...prev.notifications,
+            phones: prev.notifications.phones.filter(p => p !== phone)
+          }
+        }));
+        return;
+      }
+      
+      // Agora que temos o ID, podemos remover a notificação
+      const deleteResponse = await fetch(`https://localhost:7027/api/EventSettings/notifications/${notification.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!deleteResponse.ok) {
+        throw new Error(`Erro ao remover notificação: ${deleteResponse.status}`);
+      }
+
+      // Atualizar o estado local
+      setEventSettings(prev => ({
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          phones: prev.notifications.phones.filter(p => p !== phone)
+        }
+      }));
+    } catch (error) {
+      console.error("Erro ao remover telefone de notificação:", error);
+      alert("Erro ao remover telefone de notificação. Tente novamente.");
+    }
   };
 
   // Função para salvar todas as configurações
   const handleSaveSettings = async () => {
-    // Aqui seria feito um POST/PUT para o backend
-    alert('Configurações salvas com sucesso! (Simulação)');
+    if (!currentEvent) return;
+    
+    // Todas as operações individuais (adicionar/remover staff, produtos, notificações)
+    // já estão sendo realizadas diretamente nas funções específicas, então não é necessário
+    // fazer nenhuma operação adicional aqui, apenas fechar o modal.
+    
+    alert('Todas as alterações foram salvas com sucesso!');
     setShowSettingsModal(false);
   };
 
   // Função para acessar a loja do evento
   const handleAccessStore = () => {
-    alert('A loja está em construção e estará disponível em breve!');
+    if (!currentEvent) return;
+    
+    // Redirecionando para a página da loja (quando estiver implementada)
+    alert(`A loja do evento "${currentEvent.name}" está em construção e estará disponível em breve!`);
+    
+    // Quando a loja estiver implementada, você pode descomentar esta linha:
+    // router.push(`/store/${currentEvent.id}`);
   };
 
   // Função para exportar/baixar relatório do evento
@@ -494,15 +763,33 @@ export default function AdminEventsPage() {
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    // Em um ambiente real, aqui você faria upload para um servidor
-    // Para simulação, vamos apenas atualizar o campo imageUrl com um placeholder
-    setNewProduct(prev => ({
-      ...prev,
-      imageUrl: '/api/placeholder/80/80'
-    }));
-
-    // Simulando o upload da imagem
-    alert('Imagem carregada com sucesso (simulação)');
+    
+    // A imagem será enviada junto com os outros dados do produto no handleAddProduct
+    // portanto, não precisamos fazer nada aqui além de possivelmente validar o arquivo
+    
+    // Verificar se o arquivo é uma imagem
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido.');
+      e.target.value = ''; // Limpar o input
+      return;
+    }
+    
+    // Verificar tamanho do arquivo (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('A imagem é muito grande. Por favor, selecione uma imagem com menos de 5MB.');
+      e.target.value = ''; // Limpar o input
+      return;
+    }
+    
+    // Você pode mostrar uma pré-visualização da imagem se quiser
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setNewProduct(prev => ({
+        ...prev,
+        imageUrl: event.target?.result as string
+      }));
+    };
+    reader.readAsDataURL(file);
   };
 
   if (loading && events.length === 0) {
