@@ -13,7 +13,6 @@ interface EventDetail {
   contactEmail: string;
   totalTickets: number;
   availableTickets: number;
-  // ... demais campos do evento
 }
 
 interface User {
@@ -27,10 +26,11 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const [isEventDay, setIsEventDay] = useState(false);
 
   const router = useRouter();
-  const params = useParams(); // Pega o [id] da rota
-  const { id } = params;      // Em Next 13, vem como string
+  const params = useParams();
+  const { id } = params;
 
   useEffect(() => {
     // Recupera os dados do usuário logado do localStorage
@@ -39,7 +39,7 @@ export default function EventDetailPage() {
       setUser(JSON.parse(storedUser));
     }
 
-    if (!id) return; // se não tiver id, não faz nada
+    if (!id) return;
 
     fetch(`https://localhost:7027/api/events/${id}`)
       .then((res) => {
@@ -48,6 +48,18 @@ export default function EventDetailPage() {
       })
       .then((data) => {
         setEvent(data);
+        
+        // Verifica se o dia do evento é hoje
+        const eventDate = new Date(data.date);
+        const today = new Date();
+        
+        // Compara apenas as datas (ignora o horário)
+        const isToday = 
+          eventDate.getDate() === today.getDate() &&
+          eventDate.getMonth() === today.getMonth() &&
+          eventDate.getFullYear() === today.getFullYear();
+        
+        setIsEventDay(isToday);
         setLoading(false);
       })
       .catch((err) => {
@@ -117,9 +129,8 @@ export default function EventDetailPage() {
   };
 
   const handleAccessStore = () => {
-    // Aqui você poderia navegar para a loja do evento, por exemplo:
-    alert("Redirecionando para a loja do evento...");
-    // router.push(`/event-store/${id}`);
+    // Redireciona para a loja do evento com o ID correto
+    router.push(`/store/${id}`);
   };
 
   if (loading) {
@@ -236,12 +247,14 @@ export default function EventDetailPage() {
               {event.availableTickets > 0 ? "Comprar Ingresso" : "Ingressos Esgotados"}
             </button>
             
-            <button
-              className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
-              onClick={handleAccessStore}
-            >
-              Acessar Loja do Evento
-            </button>
+            {isEventDay && (
+              <button
+                className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
+                onClick={handleAccessStore}
+              >
+                Acessar Loja do Evento
+              </button>
+            )}
           </div>
         </div>
       </main>

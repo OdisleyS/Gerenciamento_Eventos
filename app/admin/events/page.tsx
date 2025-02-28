@@ -199,9 +199,9 @@ export default function AdminEventsPage() {
     }, 0);
   };
 
-  // Função para encontrar o próximo evento (com data mais próxima no futuro)
+  // Modifique a função getNextEvent para verificar se events é um array antes de chamar filter
   const getNextEvent = () => {
-    if (events.length === 0) return null;
+    if (!events || !Array.isArray(events) || events.length === 0) return null;
 
     const today = new Date();
     const futureEvents = events.filter(event => new Date(event.date) >= today);
@@ -300,7 +300,7 @@ export default function AdminEventsPage() {
   const handleAddProduct = async () => {
     if (!currentEvent) return;
 
-    if (!newProduct.name || newProduct.price <= 0 || newProduct.quantity <= 0 || ! newProduct.category) {
+    if (!newProduct.name || newProduct.price <= 0 || newProduct.quantity <= 0 || !newProduct.category) {
       alert('Preencha todos os campos do produto corretamente');
       return;
     }
