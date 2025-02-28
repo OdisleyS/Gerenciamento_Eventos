@@ -126,6 +126,9 @@ export default function AdminEventsPage() {
   }, []);
 
   // Função para carregar configurações do evento a partir da API
+  // No arquivo app/admin/events/page.tsx, procure a função fetchEventSettings ou uma função similar
+  // que carrega os produtos, e modifique ou adicione este trecho:
+
   const fetchEventSettings = async (eventId: number) => {
     setSettingsLoading(true);
 
@@ -155,10 +158,35 @@ export default function AdminEventsPage() {
 
       // Mapear produtos para ter imageUrl em vez de imageData
       const processedProducts = data.products ? data.products.map((product: any) => {
-        // Criar URL para a imagem ou usar placeholder
-        const imageUrl = product.imageData
-          ? `data:image/jpeg;base64,${btoa(String.fromCharCode(...new Uint8Array(product.imageData)))}`
-          : '/api/placeholder/80/80';
+        // Processamento de imagem melhorado
+        let imageUrl = '/api/placeholder/200/200'; // Imagem padrão fallback
+
+        if (product.imageData) {
+          try {
+            // Processar imagem baseado no tipo de dados
+            let base64String = '';
+
+            if (Array.isArray(product.imageData)) {
+              // Se for um array de bytes
+              base64String = btoa(String.fromCharCode(...product.imageData));
+            } else if (typeof product.imageData === 'object') {
+              // Se for um objeto como Buffer
+              const bytes = new Uint8Array(Object.values(product.imageData));
+              base64String = btoa(String.fromCharCode(...Array.from(bytes)));
+            } else if (typeof product.imageData === 'string') {
+              // Se já for uma string (talvez já em base64)
+              base64String = product.imageData;
+            }
+
+            // Criar a URL da imagem com o base64
+            if (base64String) {
+              imageUrl = `data:image/jpeg;base64,${base64String}`;
+            }
+          } catch (error) {
+            console.error("Erro ao processar imagem do produto:", error);
+            // Manter a imagem padrão em caso de erro
+          }
+        }
 
         return {
           ...product,
@@ -191,7 +219,6 @@ export default function AdminEventsPage() {
       setSettingsLoading(false);
     }
   };
-
   // Função para calcular total de ingressos vendidos corretamente
   const getTotalTicketsSold = () => {
     return events.reduce((total, event) => {

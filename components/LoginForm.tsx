@@ -38,19 +38,22 @@ export default function LoginForm() {
         },
         body: JSON.stringify(data)
       });
-      
+
       if (!response.ok) {
         console.error("Erro no login");
         return;
       }
-      
+
       const user = await response.json();
       localStorage.setItem("user", JSON.stringify(user));
 
       // Se user.role === 1, o usuário é admin; caso contrário, é cliente.
-      if (user.role === 1) {
+      if (user.role === 2) {
+        router.push(`/employee/store/${user.eventId}`)
+      } else if(user.role === 1){
         router.push("/admin/dashboard");
-      } else {
+      }
+      else {
         router.push("/client/events");
       }
     } catch (error) {
