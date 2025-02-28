@@ -229,74 +229,75 @@ export default function EventStorePage() {
   };
 
   // Finaliza a compra
-  const handleCheckout = async () => {
-    if (cart.length === 0) {
-      alert("Seu carrinho está vazio!");
-      return;
-    }
-    
-    if (!user) {
-      alert("Você precisa estar logado para finalizar a compra.");
-      return;
-    }
+const handleCheckout = async () => {
+  if (cart.length === 0) {
+    alert("Seu carrinho está vazio!");
+    return;
+  }
+  
+  if (!user) {
+    alert("Você precisa estar logado para finalizar a compra.");
+    return;
+  }
 
-    setProcessing(true);
+  setProcessing(true);
+  
+  try {
+    // Preparar os dados para a API
+    const orderData = {
+      buyerId: user.id,
+      buyerName: user.name, // Nome do usuário logado
+      items: cart.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity
+      }))
+    };
     
-    try {
-      // Preparar os dados para a API
-      const orderData = {
-        buyerId: user.id,
-        items: cart.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity
-        }))
-      };
-      
-      // Enviar a requisição para a API de Orders
-      const response = await fetch("https://localhost:7027/api/Orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(orderData)
-      });
-      
-      if (!response.ok) {
-        // Ler a mensagem de erro do servidor, se houver
-        const errorData = await response.text();
-        throw new Error(`Erro ao finalizar compra: ${errorData}`);
-      }
-      
-      const orderResult = await response.json();
-      
-      // Atualizar o estado local dos produtos (para UI)
-      const updatedProducts = products.map(product => {
-        const cartItem = cart.find(item => item.product.id === product.id);
-        if (cartItem) {
-          return {
-            ...product,
-            quantity: product.quantity - cartItem.quantity
-          };
-        }
-        return product;
-      });
-      
-      setProducts(updatedProducts);
-      
-      // Limpar o carrinho e fechar o modal
-      setCart([]);
-      setShowCart(false);
-      
-      // Mostrar confirmação para o usuário
-      alert(`Compra realizada com sucesso! Número do pedido: ${orderResult.id}`);
-      
-    } catch (error) {
-      console.error("Erro ao finalizar compra:", error);
-      alert(error instanceof Error ? error.message : "Erro ao finalizar a compra. Tente novamente.");
-    } finally {
-      setProcessing(false);
+    // Enviar a requisição para a API de Orders
+    const response = await fetch("https://localhost:7027/api/Orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(orderData)
+    });
+    
+    if (!response.ok) {
+      // Ler a mensagem de erro do servidor, se houver
+      const errorData = await response.text();
+      throw new Error(`Erro ao finalizar compra: ${errorData}`);
     }
-  };
+    
+    const orderResult = await response.json();
+    
+    // Atualizar o estado local dos produtos (para UI)
+    const updatedProducts = products.map(product => {
+      const cartItem = cart.find(item => item.product.id === product.id);
+      if (cartItem) {
+        return {
+          ...product,
+          quantity: product.quantity - cartItem.quantity
+        };
+      }
+      return product;
+    });
+    
+    setProducts(updatedProducts);
+    
+    // Limpar o carrinho e fechar o modal
+    setCart([]);
+    setShowCart(false);
+    
+    // Mostrar confirmação para o usuário
+    alert(`Compra realizada com sucesso! Número do pedido: ${orderResult.id}`);
+    
+  } catch (error) {
+    console.error("Erro ao finalizar compra:", error);
+    alert(error instanceof Error ? error.message : "Erro ao finalizar a compra. Tente novamente.");
+  } finally {
+    setProcessing(false);
+  }
+};
 
   // Função para lidar com clique no botão de pesquisa
   const toggleSearch = () => {
