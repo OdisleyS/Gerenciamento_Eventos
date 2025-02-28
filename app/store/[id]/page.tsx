@@ -42,6 +42,7 @@ export default function EventStorePage() {
   const [showCart, setShowCart] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [processing, setProcessing] = useState(false);
   
   const params = useParams();
   const router = useRouter();
@@ -234,33 +235,66 @@ export default function EventStorePage() {
       return;
     }
     
+    if (!user) {
+      alert("Você precisa estar logado para finalizar a compra.");
+      return;
+    }
+
+    setProcessing(true);
+    
     try {
-      // Para cada produto no carrinho, atualizar o estoque
-      for (const item of cart) {
-        // Em um ambiente real, você teria uma API dedicada para processar compras
-        // Aqui estamos simulando a atualização do estoque
-        const updatedProducts = products.map(product => {
-          if (product.id === item.product.id) {
-            return {
-              ...product,
-              quantity: product.quantity - item.quantity
-            };
-          }
-          return product;
-        });
-        
-        setProducts(updatedProducts);
+      // Preparar os dados para a API
+      const orderData = {
+        buyerId: user.id,
+        items: cart.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity
+        }))
+      };
+      
+      // Enviar a requisição para a API de Orders
+      const response = await fetch("https://localhost:7027/api/Orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(orderData)
+      });
+      
+      if (!response.ok) {
+        // Ler a mensagem de erro do servidor, se houver
+        const errorData = await response.text();
+        throw new Error(`Erro ao finalizar compra: ${errorData}`);
       }
       
-      alert("Compra realizada com sucesso!");
+      const orderResult = await response.json();
+      
+      // Atualizar o estado local dos produtos (para UI)
+      const updatedProducts = products.map(product => {
+        const cartItem = cart.find(item => item.product.id === product.id);
+        if (cartItem) {
+          return {
+            ...product,
+            quantity: product.quantity - cartItem.quantity
+          };
+        }
+        return product;
+      });
+      
+      setProducts(updatedProducts);
+      
+      // Limpar o carrinho e fechar o modal
       setCart([]);
       setShowCart(false);
       
-      // Em um ambiente real, aqui você redirecionaria para uma página de confirmação
-      // router.push(`/store/${eventId}/confirmation`);
+      // Mostrar confirmação para o usuário
+      alert(`Compra realizada com sucesso! Número do pedido: ${orderResult.id}`);
+      
     } catch (error) {
       console.error("Erro ao finalizar compra:", error);
-      alert("Erro ao finalizar a compra. Tente novamente.");
+      alert(error instanceof Error ? error.message : "Erro ao finalizar a compra. Tente novamente.");
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -586,7 +620,7 @@ export default function EventStorePage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
                       </button>
-                    </div>
+                      </div>
                   ))}
                 </div>
               )}
@@ -609,14 +643,24 @@ export default function EventStorePage() {
                 </button>
                 <button
                   onClick={handleCheckout}
-                  disabled={cart.length === 0}
+                  disabled={cart.length === 0 || processing}
                   className={`flex-1 py-2 rounded-lg text-white text-sm font-medium transition-all ${
-                    cart.length > 0 
+                    cart.length > 0 && !processing
                       ? 'bg-blue-600 hover:bg-blue-700' 
                       : 'bg-gray-700 cursor-not-allowed'
                   }`}
                 >
-                  Finalizar Compra
+                  {processing ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processando...
+                    </span>
+                  ) : (
+                    'Finalizar Compra'
+                  )}
                 </button>
               </div>
             </div>
