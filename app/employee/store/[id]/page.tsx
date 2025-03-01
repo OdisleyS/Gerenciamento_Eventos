@@ -265,7 +265,7 @@ export default function EventStorePage() {
         try {
             // Preparar os dados para a API
             const orderData = {
-                buyerId: user?.id, // Cliente não está logado no sistema
+                buyerId: 0, // Cliente não está logado no sistema
                 buyerName: checkoutForm.customerName, // Nome do cliente digitado pelo funcionário
                 items: cart.map(item => ({
                     productId: item.product.id,
