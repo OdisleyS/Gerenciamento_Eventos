@@ -384,17 +384,24 @@ export default function EventStorePage() {
             <header className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 shadow-md">
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
-                        {/* Nome do evento como título da loja */}
-                        <h1 className="text-2xl font-bold text-blue-400 whitespace-nowrap mr-4">
+                        {/* Nome do evento como título da loja (mantém largura mínima) */}
+                        <h1 className="text-2xl font-bold text-blue-400 whitespace-nowrap min-w-[200px]">
                             {event?.name || "Loja do Evento"}
                         </h1>
 
-                        {/* Espaço flexível para garantir layout */}
-                        <div className="flex-grow"></div>
+                        {/* Centralizar "Fila de Pedidos" */}
+                        <div className="flex-1 flex justify-center">
+                            <a
+                                href={`/employee/orders/${eventId}`}
+                                className="px-4 py-2 font-bold hover:bg-gray-800 rounded-md transition-colors text-white/80 hover:text-white"
+                            >
+                                Fila de Pedidos
+                            </a>
+                        </div>
 
                         {/* Ações do usuário */}
                         <div className="flex items-center space-x-4">
-                            {/* Barra de pesquisa ao lado do carrinho */}
+                            {/* Barra de pesquisa */}
                             <div className="relative">
                                 <div className={`flex items-center overflow-hidden transition-all duration-300 ${isSearchActive ? 'w-48' : 'w-10'} bg-gray-800 rounded-full`}>
                                     <button
@@ -671,8 +678,8 @@ export default function EventStorePage() {
                                     onClick={startCheckout}
                                     disabled={cart.length === 0 || processing}
                                     className={`flex-1 py-2 rounded-lg text-white text-sm font-medium transition-all ${cart.length > 0 && !processing
-                                            ? 'bg-blue-600 hover:bg-blue-700'
-                                            : 'bg-gray-700 cursor-not-allowed'
+                                        ? 'bg-blue-600 hover:bg-blue-700'
+                                        : 'bg-gray-700 cursor-not-allowed'
                                         }`}
                                 >
                                     {processing ? (
@@ -761,8 +768,8 @@ export default function EventStorePage() {
                                 onClick={handleFinishCheckout}
                                 disabled={!checkoutForm.customerName.trim() || processing}
                                 className={`px-4 py-2 rounded-lg text-white ${checkoutForm.customerName.trim() && !processing
-                                        ? 'bg-blue-600 hover:bg-blue-700'
-                                        : 'bg-gray-700 cursor-not-allowed'
+                                    ? 'bg-blue-600 hover:bg-blue-700'
+                                    : 'bg-gray-700 cursor-not-allowed'
                                     }`}
                             >
                                 {processing ? (
