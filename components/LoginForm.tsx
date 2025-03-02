@@ -1,3 +1,4 @@
+// components/LoginForm.tsx
 "use client";
 
 import { useForm, SubmitHandler } from "react-hook-form";
@@ -6,7 +7,8 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useAuth } from "@/auth/AuthContext";
 
 interface LoginFormValues {
   email: string;
@@ -19,7 +21,9 @@ const loginSchema = z.object({
 });
 
 export default function LoginForm() {
-  const router = useRouter();
+  const { login } = useAuth();
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -30,6 +34,9 @@ export default function LoginForm() {
   });
   
   const onSubmit: SubmitHandler<LoginFormValues> = async (data) => {
+    setIsLoading(true);
+    setError('');
+    
     try {
       const response = await fetch("https://localhost:7027/api/auth/login", {
         method: "POST",
@@ -40,30 +47,28 @@ export default function LoginForm() {
       });
 
       if (!response.ok) {
-        console.error("Erro no login");
-        return;
+        throw new Error("Credenciais inválidas. Verifique seu email e senha.");
       }
 
       const user = await response.json();
-      localStorage.setItem("user", JSON.stringify(user));
-
-      // Se user.role === 1, o usuário é admin; caso contrário, é cliente.
-      if (user.role === 2) {
-        router.push(`/employee/store/${user.eventId}`)
-      } else if(user.role === 1){
-        router.push("/admin/dashboard");
-      }
-      else {
-        router.push("/client/events");
-      }
+      login(user);
     } catch (error) {
       console.error("Erro ao efetuar login:", error);
+      setError(error instanceof Error ? error.message : "Erro ao fazer login. Tente novamente.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {error && (
+          <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-sm text-red-600">
+            {error}
+          </div>
+        )}
+        
         <FormField
           control={form.control}
           name="email"
@@ -77,6 +82,7 @@ export default function LoginForm() {
             </FormItem>
           )}
         />
+        
         <FormField
           control={form.control}
           name="password"
@@ -90,8 +96,9 @@ export default function LoginForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          Entrar
+        
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? "Entrando..." : "Entrar"}
         </Button>
       </form>
     </Form>
