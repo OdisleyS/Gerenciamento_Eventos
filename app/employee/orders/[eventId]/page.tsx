@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-
 interface User {
     id: number;
     name: string;
@@ -66,8 +65,6 @@ export default function OrderQueuePage() {
                 setEventName(eventData.name);
 
                 // Buscar os pedidos
-                // Aqui estamos buscando todos os pedidos e filtrando pelo eventId no frontend
-                // Você pode implementar uma rota específica no backend para buscar pedidos por evento
                 const ordersResponse = await fetch(`https://localhost:7027/api/Orders`);
 
                 if (!ordersResponse.ok) {
@@ -139,20 +136,20 @@ export default function OrderQueuePage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-gray-800 to-gray-900">
-                <div className="p-8 rounded-lg bg-white/10 backdrop-blur-lg shadow-2xl">
-                    <div className="flex items-center space-x-4">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
-                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce delay-75"></div>
-                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce delay-150"></div>
+                <div className="p-6 rounded-lg bg-white/10 backdrop-blur-lg shadow-lg">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce delay-75"></div>
+                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce delay-150"></div>
                     </div>
-                    <p className="text-white/80 mt-4">Carregando fila de pedidos...</p>
+                    <p className="text-white/80 mt-2 text-sm">Carregando fila de pedidos...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+        <div className="min-h-screen flex flex-col bg-gray-900 text-white">
             {/* Cabeçalho */}
             <header className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 shadow-md">
                 <div className="container mx-auto px-4 py-4">
@@ -184,71 +181,83 @@ export default function OrderQueuePage() {
                 </div>
             </header>
 
-            {/* Conteúdo Principal */}
-            <main className="flex-grow container mx-auto px-4 py-8">
-                <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden">
-                    <div className="p-4 border-b border-gray-700 bg-gray-900">
-                        <h2 className="text-xl font-bold text-white">Fila de Pedidos Pendentes</h2>
-                    </div>
+            {/* Conteúdo Principal com fundo bem definido */}
+            <main className="flex-grow py-6">
+                <div className="max-w-5xl mx-auto px-4">
+                    <div className="bg-gray-800/90 rounded-lg p-4 shadow-lg border border-gray-700">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-white">
+                                Pedidos Pendentes
+                                <span className="ml-2 text-sm font-normal text-blue-300">
+                                    ({orders.length} {orders.length === 1 ? 'pedido' : 'pedidos'})
+                                </span>
+                            </h2>
+                        </div>
 
-                    {orders.length === 0 ? (
-                        <div className="p-8 text-center">
-                            <svg className="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                            </svg>
-                            <p className="text-gray-400">Não há pedidos na fila</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-gray-900 text-gray-300 text-sm uppercase">
-                                    <tr>
-                                        <th className="py-3 px-4">Nº Pedido</th>
-                                        <th className="py-3 px-4">Cliente</th>
-                                        <th className="py-3 px-4">Data/Hora</th>
-                                        <th className="py-3 px-4">Itens</th>
-                                        <th className="py-3 px-4 text-right">Valor Total</th>
-                                        <th className="py-3 px-4 text-center">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-700">
-                                    {orders.map((order) => {
-                                        const { date, time } = formatDateTime(order.orderDate);
-                                        return (
-                                            <tr key={order.id} className="hover:bg-gray-700/50 transition-colors">
-                                                <td className="py-3 px-4 font-medium">#{order.id}</td>
-                                                <td className="py-3 px-4">{order.buyerName}</td>
-                                                <td className="py-3 px-4">
-                                                    <div>{date}</div>
-                                                    <div className="text-gray-400 text-sm">{time}</div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <div className="max-h-24 overflow-y-auto pr-2">
-                                                        {order.items.map((item) => (
-                                                            <div key={item.id} className="text-sm">
-                                                                <span className="font-medium">{item.quantity}x</span> {item.productName}
-                                                            </div>
-                                                        ))}
+                        {orders.length === 0 ? (
+                            <div className="bg-gray-700/60 rounded-lg p-8 text-center border border-gray-600">
+                                <svg className="w-12 h-12 mx-auto text-gray-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                </svg>
+                                <p className="text-gray-400">Não há pedidos na fila</p>
+                            </div>
+                        ) : (
+                            <ul className="space-y-3">
+                                {orders.map((order) => {
+                                    const { date, time } = formatDateTime(order.orderDate);
+                                    return (
+                                        <li key={order.id} className="bg-gray-800 rounded-md border border-gray-700 overflow-hidden transition-all hover:shadow-lg hover:shadow-blue-900/20">
+                                            <div className="flex flex-col sm:flex-row items-stretch">
+                                                {/* Indicador de pedido com número e hora */}
+                                                <div className="bg-blue-900/50 p-3 sm:w-24 flex flex-row sm:flex-col justify-between sm:justify-center items-center sm:items-start text-center sm:text-left">
+                                                    <div>
+                                                        <div className="text-xs text-blue-300">Pedido</div>
+                                                        <div className="font-bold text-white"># {order.id}</div>
                                                     </div>
-                                                </td>
-                                                <td className="py-3 px-4 text-right font-medium text-blue-400">
-                                                    R$ {order.totalAmount.toFixed(2).replace('.', ',')}
-                                                </td>
-                                                <td className="py-3 px-4 text-center">
-                                                    <button
-                                                        onClick={() => markOrderAsCompleted(order.id)}
-                                                        className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md text-sm font-medium transition-colors"
-                                                    >
-                                                        Pedido Entregue
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                                                    <div className="sm:mt-2">
+                                                        <div className="text-xs text-blue-300">{date}</div>
+                                                        <div className="font-mono text-sm text-white">{time}</div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Conteúdo do pedido */}
+                                                <div className="flex-grow p-3 flex flex-col sm:flex-row">
+                                                    {/* Cliente e itens */}
+                                                    <div className="flex-grow">
+                                                        <div className="font-medium text-white mb-1">{order.buyerName}</div>
+                                                        <ul className="text-sm text-gray-300 space-y-1 mt-2">
+                                                            {order.items.map((item, idx) => (
+                                                                <li key={idx} className="flex">
+                                                                    <span className="inline-block w-5 text-center font-medium text-blue-300 mr-1">{item.quantity}x</span>
+                                                                    <span>{item.productName}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+
+                                                    {/* Preço e botão */}
+                                                    <div className="flex sm:flex-col justify-between items-end mt-3 sm:mt-0 sm:ml-4 sm:min-w-24">
+                                                        <div className="text-right">
+                                                            <div className="text-xs text-blue-300">Total</div>
+                                                            <div className="font-bold text-blue-400">
+                                                                R$ {order.totalAmount.toFixed(2).replace('.', ',')}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => markOrderAsCompleted(order.id)}
+                                                            className="bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded text-sm font-medium transition-colors mt-3"
+                                                        >
+                                                            Entregar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </div>
                 </div>
             </main>
 
