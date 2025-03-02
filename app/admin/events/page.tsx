@@ -1564,6 +1564,12 @@ export default function AdminEventsPage() {
                 >
                   Acessar Loja
                 </button>
+                <button
+                  onClick={() => router.push(`/reports/${currentEvent.id}`)}
+                  className="px-5 py-2 bg-orange-500 text-white rounded hover:bg-blue-700"
+                >
+                  Relatório do Evento
+                </button>
               </div>
               <button
                 onClick={() => setShowSettingsModal(false)}
