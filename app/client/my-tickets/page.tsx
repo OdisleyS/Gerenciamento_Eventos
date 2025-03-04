@@ -46,56 +46,56 @@ export default function MyTickets() {
     // Recupera os dados do usuário logado do localStorage
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
 
-    // buyerId fixo para exemplo; em produção, use o ID do usuário autenticado
-    fetch("https://localhost:7027/api/tickets/client/1")
-      .then((res) => res.json())
-      .then((data: Ticket[]) => {
-        // Agrupa os ingressos por eventId e verifica se o evento já passou
-        const groups: { [key: number]: GroupedTickets } = {};
-        const now = new Date();
+      // Usar o ID do usuário autenticado em vez de um ID fixo
+      fetch(`https://localhost:7027/api/tickets/client/${userData.id}`)
+        .then((res) => res.json())
+        .then((data: Ticket[]) => {
+          // Restante do código permanece igual
+          const groups: { [key: number]: GroupedTickets } = {};
+          const now = new Date();
 
-        data.forEach((ticket) => {
-          // Verifica se o evento já passou
-          const eventDate = new Date(ticket.event.date);
-          const isPastEvent = eventDate < now;
+          data.forEach((ticket) => {
+            // Verifica se o evento já passou
+            const eventDate = new Date(ticket.event.date);
+            const isPastEvent = eventDate < now;
 
-          if (groups[ticket.eventId]) {
-            groups[ticket.eventId].quantity += 1;
-            groups[ticket.eventId].tickets.push(ticket);
-            groups[ticket.eventId].isPastEvent = isPastEvent;
-          } else {
-            groups[ticket.eventId] = {
-              event: ticket.event,
-              quantity: 1,
-              tickets: [ticket],
-              isPastEvent: isPastEvent
-            };
-          }
+            if (groups[ticket.eventId]) {
+              groups[ticket.eventId].quantity += 1;
+              groups[ticket.eventId].tickets.push(ticket);
+              groups[ticket.eventId].isPastEvent = isPastEvent;
+            } else {
+              groups[ticket.eventId] = {
+                event: ticket.event,
+                quantity: 1,
+                tickets: [ticket],
+                isPastEvent: isPastEvent
+              };
+            }
+          });
+
+          // Converte para array e ordena com eventos futuros primeiro
+          const sortedTickets = Object.values(groups).sort((a, b) => {
+            // Se um é passado e outro é futuro, o futuro vem primeiro
+            if (a.isPastEvent && !b.isPastEvent) return 1;
+            if (!a.isPastEvent && b.isPastEvent) return -1;
+
+            // Entre eventos do mesmo tipo (futuros ou passados), ordena por data
+            return new Date(a.event.date).getTime() - new Date(b.event.date).getTime();
+          });
+
+          setGroupedTickets(sortedTickets);
+          setFilteredTickets(sortedTickets);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Erro ao buscar ingressos:", err);
+          setLoading(false);
         });
-
-        // Converte para array e ordena com eventos futuros primeiro
-        const sortedTickets = Object.values(groups).sort((a, b) => {
-          // Se um é passado e outro é futuro, o futuro vem primeiro
-          if (a.isPastEvent && !b.isPastEvent) return 1;
-          if (!a.isPastEvent && b.isPastEvent) return -1;
-
-          // Entre eventos do mesmo tipo (futuros ou passados), ordena por data
-          return new Date(a.event.date).getTime() - new Date(b.event.date).getTime();
-        });
-
-        setGroupedTickets(sortedTickets);
-        setFilteredTickets(sortedTickets);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar ingressos:", err);
-        setLoading(false);
-      });
-  }, []);
-
+      }
+    }, []);
   // Efeito para filtrar os ingressos quando o termo de pesquisa mudar
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -307,8 +307,8 @@ export default function MyTickets() {
               <div
                 key={group.event.id}
                 className={`${group.isPastEvent
-                    ? "bg-gray-200 border border-gray-300"
-                    : "bg-white"
+                  ? "bg-gray-200 border border-gray-300"
+                  : "bg-white"
                   } rounded-lg shadow-md p-6 flex flex-col items-center space-y-2 relative transition-all hover:shadow-lg`}
               >
                 {group.isPastEvent && (
@@ -333,8 +333,8 @@ export default function MyTickets() {
                 </p>
                 <button
                   className={`mt-4 px-4 py-2 rounded transition-colors ${group.isPastEvent
-                      ? "bg-gray-400 text-gray-100 cursor-not-allowed"
-                      : "bg-gray-800 text-white hover:bg-gray-700"
+                    ? "bg-gray-400 text-gray-100 cursor-not-allowed"
+                    : "bg-gray-800 text-white hover:bg-gray-700"
                     }`}
                   onClick={() =>
                     !group.isPastEvent && window.location.assign(`/client/events/${group.event.id}`)

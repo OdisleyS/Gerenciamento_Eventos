@@ -103,28 +103,36 @@ export default function EventDetailPage() {
 
   const handleBuyTicket = async () => {
     if (!event) return;
-
+    
+    // Verificar se o usuário está logado
+    if (!user) {
+      alert("Você precisa estar logado para comprar ingressos");
+      return;
+    }
+  
     try {
-      // Exemplo: buyerId fixo em 1. Em produção, você usaria o ID do usuário logado
+      // Usar o ID do usuário logado em vez de um ID fixo
       const response = await fetch("https://localhost:7027/api/tickets/purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventId: event.id,
-          buyerId: 1,
+          buyerId: user.id, // Usar o ID do usuário logado
         }),
       });
-
+  
       if (!response.ok) {
         console.error("Erro ao comprar ingresso");
+        alert("Não foi possível completar a compra do ingresso. Por favor, tente novamente.");
         return;
       }
-
+  
       alert("Ingresso comprado com sucesso!");
-      // Se quiser, redireciona para "Meus Ingressos" ou algo assim
-      // router.push("/client/my-tickets");
+      // Redirecionar para a página "Meus Ingressos" após a compra
+      router.push("/client/my-tickets");
     } catch (error) {
       console.error("Erro na compra do ingresso:", error);
+      alert("Ocorreu um erro durante a compra do ingresso. Por favor, tente novamente.");
     }
   };
 
