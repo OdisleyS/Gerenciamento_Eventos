@@ -390,7 +390,7 @@ export default function EventStorePage() {
                         </h1>
 
                         {/* Centralizar "Fila de Pedidos" */}
-                        <div className="flex-1 flex justify-center">
+                        <div className="absolute left-1/2 transform -translate-x-1/2">
                             <a
                                 href={`/employee/orders/${eventId}`}
                                 className="px-4 py-2 font-bold hover:bg-gray-800 rounded-md transition-colors text-white/80 hover:text-white"
@@ -456,14 +456,6 @@ export default function EventStorePage() {
                             <div className="text-sm bg-gray-800 px-3 py-1 rounded-full border border-gray-700">
                                 {user ? user.name : "Visitante"}
                             </div>
-
-                            {/* Voltar para o site principal */}
-                            <a
-                                href="/client/events"
-                                className="text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded-full border border-gray-700 transition-colors"
-                            >
-                                Voltar
-                            </a>
                         </div>
                     </div>
                 </div>

@@ -71,15 +71,32 @@ export default function OrderQueuePage() {
                     throw new Error("Erro ao carregar pedidos");
                 }
 
-                const ordersData = await ordersResponse.json();
+                const allOrders = await ordersResponse.json();
 
-                // Filtrando apenas pedidos com status "Pending" (0)
-                const pendingOrders = ordersData.filter((order: any) =>
-                    order.status === 0 || order.status === "Pending" || order.status === "pending"
-                );
+                // Buscar os produtos do evento para identificar quais pedidos estão relacionados a este evento
+                const productsResponse = await fetch(`https://localhost:7027/api/EventSettings/${eventId}`);
+                if (!productsResponse.ok) {
+                    throw new Error("Erro ao carregar produtos do evento");
+                }
+
+                const productsData = await productsResponse.json();
+                const eventProductIds = productsData.products.map((product: any) => product.id);
+
+                // Filtrar pedidos que têm pelo menos um item de produto relacionado ao evento atual
+                const eventOrders = allOrders.filter((order: any) => {
+                    // Verifica se o pedido tem status pendente
+                    const isPending = order.status === 0 || order.status === "Pending" || order.status === "pending";
+
+                    // Verifica se algum item do pedido é um produto deste evento
+                    const hasEventProduct = order.items && order.items.some((item: any) =>
+                        eventProductIds.includes(item.productId)
+                    );
+
+                    return isPending && hasEventProduct;
+                });
 
                 // Ordenar pedidos do mais antigo para o mais recente
-                const sortedOrders = pendingOrders.sort((a: Order, b: Order) =>
+                const sortedOrders = eventOrders.sort((a: Order, b: Order) =>
                     new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime()
                 );
 
@@ -93,7 +110,6 @@ export default function OrderQueuePage() {
 
         fetchEventData();
     }, [eventId]);
-
     // Função para formatar data e hora
     const formatDateTime = (dateString: string) => {
         const date = new Date(dateString);
@@ -164,18 +180,18 @@ export default function OrderQueuePage() {
 
                         {/* Ações do usuário */}
                         <div className="flex items-center space-x-4">
-                            {/* Botão para voltar para a loja */}
-                            <button
-                                onClick={() => router.push(`/employee/store/${eventId}`)}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white transition-colors"
-                            >
-                                Voltar para Loja
-                            </button>
 
                             {/* Nome do usuário */}
                             <div className="text-sm bg-gray-800 px-3 py-1 rounded-full border border-gray-700">
                                 {user ? user.name : "Funcionário"}
                             </div>
+                            {/* Botão para voltar para a loja */}
+                            <button
+                                onClick={() => router.push(`/employee/store/${eventId}`)}
+                                className="text-sm bg-gray-800 px-3 py-1 rounded-full border border-gray-700"
+                            >
+                                Voltar para Loja
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -219,7 +235,7 @@ export default function OrderQueuePage() {
                                                         <div className="font-mono text-sm text-white">{time}</div>
                                                     </div>
                                                 </div>
-                                                
+
                                                 {/* Conteúdo do pedido */}
                                                 <div className="flex-grow p-3 flex flex-col sm:flex-row">
                                                     {/* Cliente e itens */}
