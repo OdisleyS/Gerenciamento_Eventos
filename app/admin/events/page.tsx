@@ -14,6 +14,7 @@ interface Event {
   contactEmail: string;
   availableTickets: number;
   totalTickets: number;
+  createdBy: number;
 }
 
 interface User {
@@ -66,12 +67,15 @@ interface EventSettings {
   notifications: EventNotification;
 }
 
+
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
+  
   // Estados para modal de edição
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -117,11 +121,8 @@ export default function AdminEventsPage() {
     setLoading(true);
     fetch("https://localhost:7027/api/Events")
       .then((res) => res.json())
-      .then((data: Event[]) => {
-        // Filtra os eventos que ainda não terminaram (endDate > agora)
-        const currentDate = new Date();
-        const filteredEvents = data.filter(ev => new Date(ev.endDate) > currentDate);
-        setEvents(filteredEvents);
+      .then((data) => {
+        setAllEvents(data);
         setLoading(false);
       })
       .catch((err) => {
@@ -131,14 +132,18 @@ export default function AdminEventsPage() {
   };
   
   
+  useEffect(() => {
+    if (user) {
+      setEvents(allEvents.filter((ev) => ev.createdBy === user.id));
+    } else {
+      setEvents(allEvents);
+    }
+  }, [allEvents, user]);
+  
 
   useEffect(() => {
     fetchEvents();
   }, []);
-
-  // Função para carregar configurações do evento a partir da API
-  // No arquivo app/admin/events/page.tsx, procure a função fetchEventSettings ou uma função similar
-  // que carrega os produtos, e modifique ou adicione este trecho:
 
   const fetchEventSettings = async (eventId: number) => {
     setSettingsLoading(true);
