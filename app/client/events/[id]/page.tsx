@@ -27,38 +27,73 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [isEventDay, setIsEventDay] = useState(false);
+  const [hasTicket, setHasTicket] = useState(false);
 
   const router = useRouter();
   const params = useParams();
   const { id } = params;
 
+
+  // Modifique a função checkUserHasTicket para aceitar o mesmo tipo do id
+  const checkUserHasTicket = async (userId: number, eventId: string | string[] | number) => {
+    try {
+      // Converta eventId para número, independente de ser string ou array
+      const parsedEventId = Array.isArray(eventId) ? parseInt(eventId[0]) : parseInt(String(eventId));
+
+      const response = await fetch(`https://localhost:7027/api/tickets/client/${userId}`);
+
+      if (!response.ok) {
+        console.error("Erro ao verificar ingressos do usuário");
+        return false;
+      }
+
+      const tickets = await response.json();
+
+      // Verifica se o usuário tem algum ingresso para este evento específico
+      const hasEventTicket = tickets.some((ticket: any) => ticket.eventId === parsedEventId);
+
+      setHasTicket(hasEventTicket);
+      return hasEventTicket;
+    } catch (error) {
+      console.error("Erro ao verificar ingressos:", error);
+      return false;
+    }
+  };
+
+  // Modifique o useEffect existente para chamar esta verificação
   useEffect(() => {
     // Recupera os dados do usuário logado do localStorage
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+
+      // Verificar se o usuário tem ingresso para este evento
+      if (id) {
+        checkUserHasTicket(userData.id, id);
+      }
     }
 
     if (!id) return;
 
-    fetch(`https://localhost:7027/api/events/${id}`)
+    fetch(`https://localhost:7027/api/Events/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error("Evento não encontrado");
         return res.json();
       })
       .then((data) => {
         setEvent(data);
-        
+
         // Verifica se o dia do evento é hoje
         const eventDate = new Date(data.date);
         const today = new Date();
-        
+
         // Compara apenas as datas (ignora o horário)
-        const isToday = 
+        const isToday =
           eventDate.getDate() === today.getDate() &&
           eventDate.getMonth() === today.getMonth() &&
           eventDate.getFullYear() === today.getFullYear();
-        
+
         setIsEventDay(isToday);
         setLoading(false);
       })
@@ -72,12 +107,12 @@ export default function EventDetailPage() {
   const formatarData = (dataString: string) => {
     try {
       const data = new Date(dataString);
-      
+
       // Formatar data para o padrão brasileiro
       const dia = data.getDate().toString().padStart(2, '0');
       const mes = (data.getMonth() + 1).toString().padStart(2, '0');
       const ano = data.getFullYear();
-      
+
       return `${dia}/${mes}/${ano}`;
     } catch (error) {
       console.error("Erro ao formatar data:", error);
@@ -89,11 +124,11 @@ export default function EventDetailPage() {
   const formatarHora = (dataString: string) => {
     try {
       const data = new Date(dataString);
-      
+
       // Formatar hora
       const hora = data.getHours().toString().padStart(2, '0');
       const minutos = data.getMinutes().toString().padStart(2, '0');
-      
+
       return `${hora}:${minutos}`;
     } catch (error) {
       console.error("Erro ao formatar hora:", error);
@@ -101,15 +136,16 @@ export default function EventDetailPage() {
     }
   };
 
+  // Modifique a função handleBuyTicket para atualizar o estado hasTicket após a compra
   const handleBuyTicket = async () => {
     if (!event) return;
-    
+
     // Verificar se o usuário está logado
     if (!user) {
       alert("Você precisa estar logado para comprar ingressos");
       return;
     }
-  
+
     try {
       // Usar o ID do usuário logado em vez de um ID fixo
       const response = await fetch("https://localhost:7027/api/tickets/purchase", {
@@ -120,13 +156,16 @@ export default function EventDetailPage() {
           buyerId: user.id, // Usar o ID do usuário logado
         }),
       });
-  
+
       if (!response.ok) {
         console.error("Erro ao comprar ingresso");
         alert("Não foi possível completar a compra do ingresso. Por favor, tente novamente.");
         return;
       }
-  
+
+      // Atualizar o estado para mostrar que agora o usuário tem ingresso
+      setHasTicket(true);
+
       alert("Ingresso comprado com sucesso!");
       // Redirecionar para a página "Meus Ingressos" após a compra
       router.push("/client/my-tickets");
@@ -135,7 +174,6 @@ export default function EventDetailPage() {
       alert("Ocorreu um erro durante a compra do ingresso. Por favor, tente novamente.");
     }
   };
-
   const handleAccessStore = () => {
     // Redireciona para a loja do evento com o ID correto
     router.push(`/store/${id}`);
@@ -166,33 +204,33 @@ export default function EventDetailPage() {
           <div className="flex-shrink-0 w-1/4">
             <h1 className="text-xl font-bold">Controle-SE</h1>
           </div>
-          
+
           {/* Menu centralizado */}
           <div className="flex-grow flex justify-center">
             <nav className="flex space-x-6">
-              <a 
-                href="/client/events" 
+              <a
+                href="/client/events"
                 className="px-4 py-2 hover:bg-gray-700 rounded-md transition-colors"
               >
                 Home
               </a>
-              <a 
-                href="/client/my-tickets" 
+              <a
+                href="/client/my-tickets"
                 className="px-4 py-2 hover:bg-gray-700 rounded-md transition-colors"
               >
                 Meus Ingressos
               </a>
             </nav>
           </div>
-          
+
           {/* Área do usuário à direita */}
           <div className="flex-shrink-0 w-1/4 flex justify-end">
             <div className="flex items-center space-x-4">
               <div className="text-sm bg-gray-700 px-3 py-1 rounded-full">
                 Logado como: {user ? user.name : "Carregando..."}
               </div>
-              <a 
-                href="http://localhost:3000" 
+              <a
+                href="http://localhost:3000"
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
               >
                 Sair
@@ -206,7 +244,7 @@ export default function EventDetailPage() {
       <main className="flex-grow container mx-auto py-8 px-4">
         <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
           <h2 className="text-2xl font-bold mb-6 pb-2 border-b">{event.name}</h2>
-          
+
           {/* Informações do Evento */}
           <div className="space-y-4 mb-6">
             <h3 className="text-lg font-semibold text-gray-800">Informações do Evento</h3>
@@ -226,7 +264,7 @@ export default function EventDetailPage() {
               <span className="font-medium">Descrição:</span> {event.description || "Sem descrição disponível"}
             </p>
           </div>
-          
+
           {/* Informações de Contato */}
           <div className="mt-6 pt-4 border-t space-y-4 mb-6">
             <h3 className="text-lg font-semibold text-gray-800">Informações de Contato</h3>
@@ -247,21 +285,23 @@ export default function EventDetailPage() {
 
           {/* Botões de ação */}
           <div className="mt-8 pt-4 border-t flex justify-center space-x-4">
-            <button
-              className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
-              onClick={handleBuyTicket}
-              disabled={event.availableTickets <= 0}
-            >
-              {event.availableTickets > 0 ? "Comprar Ingresso" : "Ingressos Esgotados"}
-            </button>
-            
-            {isEventDay && (
+            {!hasTicket ? (
               <button
                 className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
-                onClick={handleAccessStore}
+                onClick={handleBuyTicket}
+                disabled={event.availableTickets <= 0}
               >
-                Acessar Loja do Evento
+                {event.availableTickets > 0 ? "Comprar Ingresso" : "Ingressos Esgotados"}
               </button>
+            ) : (
+              isEventDay && (
+                <button
+                  className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  onClick={handleAccessStore}
+                >
+                  Acessar Loja do Evento
+                </button>
+              )
             )}
           </div>
         </div>
