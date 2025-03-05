@@ -21,7 +21,9 @@ interface EventFormValues {
   name: string;
   description?: string;
   date: string;
-  time: string; // Novo campo para o horário
+  time: string;
+  endDate: string;
+  endTime: string;
   location: string;
   totalTickets: number;
   contactPhone?: string;
@@ -32,7 +34,9 @@ const eventSchema = z.object({
   name: z.string().min(1, { message: "Nome é obrigatório" }),
   description: z.string().optional(),
   date: z.string().min(1, { message: "Data é obrigatória" }),
-  time: z.string().min(1, { message: "Horário é obrigatório" }), // Validação para o horário
+  time: z.string().min(1, { message: "Horário é obrigatório" }),
+  endDate: z.string().min(1, { message: "Data final é obrigatória" }),
+  endTime: z.string().min(1, { message: "Horário final é obrigatório" }),
   location: z.string().min(1, { message: "Local é obrigatório" }),
   totalTickets: z.coerce.number({
     invalid_type_error: "Total de ingressos deve ser um número",
@@ -59,7 +63,9 @@ export default function NewEventPage() {
       name: "",
       description: "",
       date: "",
-      time: "", // Valor padrão para o horário
+      time: "",
+      endDate: "",
+      endTime: "",
       location: "",
       totalTickets: 0,
       contactPhone: "",
@@ -84,13 +90,20 @@ export default function NewEventPage() {
     setIsSubmitting(true);
     
     try {
-      // Combina a data e o horário para criar um objeto de data completo
-      const [year, month, day] = data.date.split('-').map(Number);
-      const [hours, minutes] = data.time.split(':').map(Number);
+      // Combina a data e o horário de início para criar um objeto de data completo
+      const [startYear, startMonth, startDay] = data.date.split('-').map(Number);
+      const [startHours, startMinutes] = data.time.split(':').map(Number);
+      
+      // Combina a data e o horário de fim para criar um objeto de data completo para o endDate
+      const [endYear, endMonth, endDay] = data.endDate.split('-').map(Number);
+      const [endHours, endMinutes] = data.endTime.split(':').map(Number);
       
       // Mês em JavaScript é 0-indexed (0-11), então subtraímos 1
-      const eventDateTime = new Date(year, month - 1, day, hours, minutes);
+      const eventDateTime = new Date(startYear, startMonth - 1, startDay, startHours, startMinutes);
+      const eventEndDateTime = new Date(endYear, endMonth - 1, endDay, endHours, endMinutes);
+      
       const utcDate = eventDateTime.toISOString();
+      const utcEndDate = eventEndDateTime.toISOString();
 
       const response = await fetch("https://localhost:7027/api/Events", {
         method: "POST",
@@ -98,6 +111,7 @@ export default function NewEventPage() {
         body: JSON.stringify({
           ...data,
           date: utcDate, // Envia a data com o horário
+          endDate: utcEndDate, // Envia a data final com o horário
           createdBy: user.id,
         }),
       });
@@ -216,7 +230,7 @@ export default function NewEventPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-gray-700 font-medium">
-                            Data
+                            Data de Início
                           </FormLabel>
                           <FormControl>
                             <Input 
@@ -235,7 +249,7 @@ export default function NewEventPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-gray-700 font-medium">
-                            Horário
+                            Horário de Início
                           </FormLabel>
                           <FormControl>
                             <Input 
@@ -259,6 +273,48 @@ export default function NewEventPage() {
                           <FormControl>
                             <Input 
                               placeholder="Local do Evento" 
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Data e Horário de Fim */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
+                    <FormField
+                      control={form.control}
+                      name="endDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            Data de Término
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date" 
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage className="text-red-500" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="endTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 font-medium">
+                            Horário de Término
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="time" 
                               className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
                               {...field} 
                             />

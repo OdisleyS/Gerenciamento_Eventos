@@ -7,6 +7,7 @@ interface Event {
   id: number;
   name: string;
   date: string;
+  endDate: string;
   location: string;
   description: string;
   contactPhone: string;
@@ -22,11 +23,14 @@ interface User {
   role: number;
 }
 
+// No arquivo app/admin/events/page.tsx
 interface EditEventForm {
   name: string;
   description: string;
   date: string;
   time: string;
+  endDate: string;
+  endTime: string;
   location: string;
   contactPhone: string;
   contactEmail: string;
@@ -78,6 +82,8 @@ export default function AdminEventsPage() {
     description: "",
     date: "",
     time: "",
+    endDate: "",
+    endTime: "",
     location: "",
     contactPhone: "",
     contactEmail: ""
@@ -674,30 +680,42 @@ export default function AdminEventsPage() {
   };
 
   // Função para abrir modal de edição
-  const openEditModal = (event: Event) => {
-    setCurrentEvent(event);
+// No arquivo app/admin/events/page.tsx
+const openEditModal = (event: Event) => {
+  setCurrentEvent(event);
 
-    // Preparar data e hora para o formulário
-    const eventDate = new Date(event.date);
-    const formattedDate = eventDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+  // Preparar data e hora para o formulário
+  const eventDate = new Date(event.date);
+  const formattedDate = eventDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-    // Formatar hora (HH:MM)
-    const hours = eventDate.getHours().toString().padStart(2, '0');
-    const minutes = eventDate.getMinutes().toString().padStart(2, '0');
-    const formattedTime = `${hours}:${minutes}`;
+  // Formatar hora (HH:MM)
+  const hours = eventDate.getHours().toString().padStart(2, '0');
+  const minutes = eventDate.getMinutes().toString().padStart(2, '0');
+  const formattedTime = `${hours}:${minutes}`;
 
-    setEditForm({
-      name: event.name,
-      description: event.description || "",
-      date: formattedDate,
-      time: formattedTime,
-      location: event.location,
-      contactPhone: event.contactPhone || "",
-      contactEmail: event.contactEmail || ""
-    });
+  // Preparar data e hora FINAL para o formulário
+  const endEventDate = new Date(event.endDate);
+  const formattedEndDate = endEventDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-    setShowEditModal(true);
-  };
+  // Formatar hora final (HH:MM)
+  const endHours = endEventDate.getHours().toString().padStart(2, '0');
+  const endMinutes = endEventDate.getMinutes().toString().padStart(2, '0');
+  const formattedEndTime = `${endHours}:${endMinutes}`;
+
+  setEditForm({
+    name: event.name,
+    description: event.description || "",
+    date: formattedDate,
+    time: formattedTime,
+    endDate: formattedEndDate,
+    endTime: formattedEndTime,
+    location: event.location,
+    contactPhone: event.contactPhone || "",
+    contactEmail: event.contactEmail || ""
+  });
+
+  setShowEditModal(true);
+};
 
   // Função para abrir modal de confirmação de exclusão
   const openDeleteModal = (event: Event) => {
@@ -706,40 +724,46 @@ export default function AdminEventsPage() {
   };
 
   // Função para atualizar evento
-  const handleUpdateEvent = async () => {
-    if (!currentEvent) return;
+// No arquivo app/admin/events/page.tsx
+const handleUpdateEvent = async () => {
+  if (!currentEvent) return;
 
-    try {
-      // Combinar data e hora
-      const dateTime = new Date(`${editForm.date}T${editForm.time}`);
-      const utcDate = dateTime.toISOString();
+  try {
+    // Combinar data e hora inicial
+    const dateTime = new Date(`${editForm.date}T${editForm.time}`);
+    const utcDate = dateTime.toISOString();
 
-      const response = await fetch(`https://localhost:7027/api/Events/${currentEvent.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editForm.name,
-          description: editForm.description,
-          date: utcDate,
-          location: editForm.location,
-          contactPhone: editForm.contactPhone,
-          contactEmail: editForm.contactEmail
-        }),
-      });
+    // Combinar data e hora final
+    const endDateTime = new Date(`${editForm.endDate}T${editForm.endTime}`);
+    const utcEndDate = endDateTime.toISOString();
 
-      if (!response.ok) {
-        throw new Error("Erro ao atualizar evento");
-      }
+    const response = await fetch(`https://localhost:7027/api/Events/${currentEvent.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: editForm.name,
+        description: editForm.description,
+        date: utcDate,
+        endDate: utcEndDate,
+        location: editForm.location,
+        contactPhone: editForm.contactPhone,
+        contactEmail: editForm.contactEmail
+      }),
+    });
 
-      // Fechar modal e atualizar lista
-      setShowEditModal(false);
-      fetchEvents();
-      alert("Evento atualizado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao atualizar evento:", error);
-      alert("Erro ao atualizar evento. Tente novamente.");
+    if (!response.ok) {
+      throw new Error("Erro ao atualizar evento");
     }
-  };
+
+    // Fechar modal e atualizar lista
+    setShowEditModal(false);
+    fetchEvents();
+    alert("Evento atualizado com sucesso!");
+  } catch (error) {
+    console.error("Erro ao atualizar evento:", error);
+    alert("Erro ao atualizar evento. Tente novamente.");
+  }
+};
 
   // Função para deletar evento
   const handleDeleteEvent = async () => {
@@ -1072,6 +1096,29 @@ export default function AdminEventsPage() {
                     type="time"
                     name="time"
                     value={editForm.time}
+                    onChange={handleFormChange}
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 font-medium mb-1">Data Final</label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={editForm.endDate}
+                    onChange={handleFormChange}
+                    className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-medium mb-1">Hora Final</label>
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={editForm.endTime}
                     onChange={handleFormChange}
                     className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
                   />
