@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface RegisterFormValues {
   name: string;
@@ -41,6 +42,9 @@ const registerSchema = z
 
 export default function RegisterForm() {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -53,6 +57,10 @@ export default function RegisterForm() {
   });
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
+    setIsSubmitting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
     try {
       const response = await fetch(
         "https://localhost:7027/api/auth/register",
@@ -67,20 +75,46 @@ export default function RegisterForm() {
           }),
         }
       );
+      
       if (!response.ok) {
-        console.error("Erro no cadastro");
-        return;
+        const errorData = await response.text();
+        throw new Error(errorData || "Erro ao realizar cadastro");
       }
-      const user = await response.json();
-      router.push("/client/events");
+      
+      // Cadastro bem-sucedido
+      setSuccessMessage("Cadastro realizado com sucesso! Redirecionando para a página de login...");
+      
+      // Limpar formulário
+      form.reset();
+      
+      // Redirecionar após 2 segundos
+      setTimeout(() => {
+        router.push("/"); // Redireciona para a página de login (raiz)
+      }, 2000);
+      
     } catch (error) {
       console.error("Erro ao cadastrar:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Erro ao cadastrar. Tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {errorMessage && (
+          <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-md text-sm text-red-600">
+            {errorMessage}
+          </div>
+        )}
+        
+        {successMessage && (
+          <div className="p-3 bg-green-500/20 border border-green-500/50 rounded-md text-sm text-green-600">
+            {successMessage}
+          </div>
+        )}
+
         <FormField
           control={form.control}
           name="name"
@@ -137,8 +171,8 @@ export default function RegisterForm() {
           )}
         />
 
-        <Button type="submit" className="w-full">
-          Cadastrar
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? "Cadastrando..." : "Cadastrar"}
         </Button>
       </form>
     </Form>
