@@ -6,6 +6,7 @@ interface Event {
   id: number;
   name: string;
   date: string;
+  endDate: string;
   location: string;
   description?: string;
 }
@@ -48,7 +49,7 @@ export default function MyTickets() {
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
-
+  
       // Usar o ID do usuário autenticado em vez de um ID fixo
       fetch(`https://localhost:7027/api/tickets/client/${userData.id}`)
         .then((res) => res.json())
@@ -56,12 +57,13 @@ export default function MyTickets() {
           // Restante do código permanece igual
           const groups: { [key: number]: GroupedTickets } = {};
           const now = new Date();
-
+  
           data.forEach((ticket) => {
-            // Verifica se o evento já passou
-            const eventDate = new Date(ticket.event.date);
-            const isPastEvent = eventDate < now;
-
+            // Aqui vamos mudar para verificar a EndDate do evento
+            // Verifica se o evento já passou (baseado na data final)
+            const eventEndDate = new Date(ticket.event.endDate);
+            const isPastEvent = eventEndDate < now;
+  
             if (groups[ticket.eventId]) {
               groups[ticket.eventId].quantity += 1;
               groups[ticket.eventId].tickets.push(ticket);
@@ -75,17 +77,17 @@ export default function MyTickets() {
               };
             }
           });
-
+  
           // Converte para array e ordena com eventos futuros primeiro
           const sortedTickets = Object.values(groups).sort((a, b) => {
             // Se um é passado e outro é futuro, o futuro vem primeiro
             if (a.isPastEvent && !b.isPastEvent) return 1;
             if (!a.isPastEvent && b.isPastEvent) return -1;
-
+  
             // Entre eventos do mesmo tipo (futuros ou passados), ordena por data
             return new Date(a.event.date).getTime() - new Date(b.event.date).getTime();
           });
-
+  
           setGroupedTickets(sortedTickets);
           setFilteredTickets(sortedTickets);
           setLoading(false);
@@ -94,8 +96,8 @@ export default function MyTickets() {
           console.error("Erro ao buscar ingressos:", err);
           setLoading(false);
         });
-      }
-    }, []);
+    }
+  }, []);
   // Efeito para filtrar os ingressos quando o termo de pesquisa mudar
   useEffect(() => {
     if (searchTerm.trim() === "") {

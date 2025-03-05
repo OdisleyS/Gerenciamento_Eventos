@@ -7,6 +7,7 @@ interface EventDetail {
   id: number;
   name: string;
   date: string;
+  endDate: string;
   location: string;
   description: string;
   contactPhone: string;
@@ -67,15 +68,15 @@ export default function EventDetailPage() {
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
-
+  
       // Verificar se o usuário tem ingresso para este evento
       if (id) {
         checkUserHasTicket(userData.id, id);
       }
     }
-
+  
     if (!id) return;
-
+  
     fetch(`https://localhost:7027/api/Events/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error("Evento não encontrado");
@@ -83,18 +84,16 @@ export default function EventDetailPage() {
       })
       .then((data) => {
         setEvent(data);
-
-        // Verifica se o dia do evento é hoje
-        const eventDate = new Date(data.date);
+  
+        // Verifica se o evento está acontecendo agora - entre a data inicial e final
+        const eventStartDate = new Date(data.date);
+        const eventEndDate = new Date(data.endDate);
         const today = new Date();
-
-        // Compara apenas as datas (ignora o horário)
-        const isToday =
-          eventDate.getDate() === today.getDate() &&
-          eventDate.getMonth() === today.getMonth() &&
-          eventDate.getFullYear() === today.getFullYear();
-
-        setIsEventDay(isToday);
+  
+        // Evento está acontecendo se: data atual está entre início e fim
+        const isHappening = today >= eventStartDate && today <= eventEndDate;
+  
+        setIsEventDay(isHappening);
         setLoading(false);
       })
       .catch((err) => {
@@ -104,35 +103,23 @@ export default function EventDetailPage() {
   }, [id]);
 
   // Função para formatar apenas a data (DD/MM/AAAA)
-  const formatarData = (dataString: string) => {
+  const formatarDataHora = (dataString: string) => {
     try {
       const data = new Date(dataString);
-
+      
       // Formatar data para o padrão brasileiro
       const dia = data.getDate().toString().padStart(2, '0');
       const mes = (data.getMonth() + 1).toString().padStart(2, '0');
       const ano = data.getFullYear();
-
-      return `${dia}/${mes}/${ano}`;
-    } catch (error) {
-      console.error("Erro ao formatar data:", error);
-      return "Data não disponível";
-    }
-  };
-
-  // Função para obter apenas a hora (HH:MM)
-  const formatarHora = (dataString: string) => {
-    try {
-      const data = new Date(dataString);
-
+      
       // Formatar hora
       const hora = data.getHours().toString().padStart(2, '0');
       const minutos = data.getMinutes().toString().padStart(2, '0');
-
-      return `${hora}:${minutos}`;
+      
+      return `${dia}/${mes}/${ano} às ${hora}:${minutos}`;
     } catch (error) {
-      console.error("Erro ao formatar hora:", error);
-      return "Hora não disponível";
+      console.error("Erro ao formatar data:", error);
+      return dataString; // Retorna a string original se houver erro
     }
   };
 
@@ -249,10 +236,10 @@ export default function EventDetailPage() {
           <div className="space-y-4 mb-6">
             <h3 className="text-lg font-semibold text-gray-800">Informações do Evento</h3>
             <p className="text-gray-700">
-              <span className="font-medium">Data:</span> {formatarData(event.date)}
+              <span className="font-medium">Início:</span> {formatarDataHora(event.date)}
             </p>
             <p className="text-gray-700">
-              <span className="font-medium">Hora:</span> {formatarHora(event.date)}
+              <span className="font-medium">Termino:</span> {formatarDataHora(event.endDate)}
             </p>
             <p className="text-gray-700">
               <span className="font-medium">Local:</span> {event.location}
@@ -260,6 +247,7 @@ export default function EventDetailPage() {
             <p className="text-gray-700">
               <span className="font-medium">Ingressos restantes:</span> {event.availableTickets}
             </p>
+
             <p className="text-gray-700">
               <span className="font-medium">Descrição:</span> {event.description || "Sem descrição disponível"}
             </p>
