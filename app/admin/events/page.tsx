@@ -75,7 +75,7 @@ export default function AdminEventsPage() {
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
-  
+
   // Estados para modal de edição
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -130,8 +130,8 @@ export default function AdminEventsPage() {
         setLoading(false);
       });
   };
-  
-  
+
+
   useEffect(() => {
     if (user) {
       setEvents(allEvents.filter((ev) => ev.createdBy === user.id));
@@ -139,7 +139,7 @@ export default function AdminEventsPage() {
       setEvents(allEvents);
     }
   }, [allEvents, user]);
-  
+
 
   useEffect(() => {
     fetchEvents();
@@ -352,7 +352,7 @@ export default function AdminEventsPage() {
       // Criar um FormData para envio de arquivo
       const formData = new FormData();
       formData.append('name', newProduct.name);
-      formData.append('price', newProduct.price.toString());
+      formData.append('price', newProduct.price.toString().replace('.', ','));
       formData.append('quantity', newProduct.quantity.toString());
       formData.append('category', newProduct.category);
 
@@ -690,42 +690,42 @@ export default function AdminEventsPage() {
   };
 
   // Função para abrir modal de edição
-// No arquivo app/admin/events/page.tsx
-const openEditModal = (event: Event) => {
-  setCurrentEvent(event);
+  // No arquivo app/admin/events/page.tsx
+  const openEditModal = (event: Event) => {
+    setCurrentEvent(event);
 
-  // Preparar data e hora para o formulário
-  const eventDate = new Date(event.date);
-  const formattedDate = eventDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    // Preparar data e hora para o formulário
+    const eventDate = new Date(event.date);
+    const formattedDate = eventDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-  // Formatar hora (HH:MM)
-  const hours = eventDate.getHours().toString().padStart(2, '0');
-  const minutes = eventDate.getMinutes().toString().padStart(2, '0');
-  const formattedTime = `${hours}:${minutes}`;
+    // Formatar hora (HH:MM)
+    const hours = eventDate.getHours().toString().padStart(2, '0');
+    const minutes = eventDate.getMinutes().toString().padStart(2, '0');
+    const formattedTime = `${hours}:${minutes}`;
 
-  // Preparar data e hora FINAL para o formulário
-  const endEventDate = new Date(event.endDate);
-  const formattedEndDate = endEventDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    // Preparar data e hora FINAL para o formulário
+    const endEventDate = new Date(event.endDate);
+    const formattedEndDate = endEventDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 
-  // Formatar hora final (HH:MM)
-  const endHours = endEventDate.getHours().toString().padStart(2, '0');
-  const endMinutes = endEventDate.getMinutes().toString().padStart(2, '0');
-  const formattedEndTime = `${endHours}:${endMinutes}`;
+    // Formatar hora final (HH:MM)
+    const endHours = endEventDate.getHours().toString().padStart(2, '0');
+    const endMinutes = endEventDate.getMinutes().toString().padStart(2, '0');
+    const formattedEndTime = `${endHours}:${endMinutes}`;
 
-  setEditForm({
-    name: event.name,
-    description: event.description || "",
-    date: formattedDate,
-    time: formattedTime,
-    endDate: formattedEndDate,
-    endTime: formattedEndTime,
-    location: event.location,
-    contactPhone: event.contactPhone || "",
-    contactEmail: event.contactEmail || ""
-  });
+    setEditForm({
+      name: event.name,
+      description: event.description || "",
+      date: formattedDate,
+      time: formattedTime,
+      endDate: formattedEndDate,
+      endTime: formattedEndTime,
+      location: event.location,
+      contactPhone: event.contactPhone || "",
+      contactEmail: event.contactEmail || ""
+    });
 
-  setShowEditModal(true);
-};
+    setShowEditModal(true);
+  };
 
   // Função para abrir modal de confirmação de exclusão
   const openDeleteModal = (event: Event) => {
@@ -734,46 +734,46 @@ const openEditModal = (event: Event) => {
   };
 
   // Função para atualizar evento
-// No arquivo app/admin/events/page.tsx
-const handleUpdateEvent = async () => {
-  if (!currentEvent) return;
+  // No arquivo app/admin/events/page.tsx
+  const handleUpdateEvent = async () => {
+    if (!currentEvent) return;
 
-  try {
-    // Combinar data e hora inicial
-    const dateTime = new Date(`${editForm.date}T${editForm.time}`);
-    const utcDate = dateTime.toISOString();
+    try {
+      // Combinar data e hora inicial
+      const dateTime = new Date(`${editForm.date}T${editForm.time}`);
+      const utcDate = dateTime.toISOString();
 
-    // Combinar data e hora final
-    const endDateTime = new Date(`${editForm.endDate}T${editForm.endTime}`);
-    const utcEndDate = endDateTime.toISOString();
+      // Combinar data e hora final
+      const endDateTime = new Date(`${editForm.endDate}T${editForm.endTime}`);
+      const utcEndDate = endDateTime.toISOString();
 
-    const response = await fetch(`https://localhost:7027/api/Events/${currentEvent.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: editForm.name,
-        description: editForm.description,
-        date: utcDate,
-        endDate: utcEndDate,
-        location: editForm.location,
-        contactPhone: editForm.contactPhone,
-        contactEmail: editForm.contactEmail
-      }),
-    });
+      const response = await fetch(`https://localhost:7027/api/Events/${currentEvent.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editForm.name,
+          description: editForm.description,
+          date: utcDate,
+          endDate: utcEndDate,
+          location: editForm.location,
+          contactPhone: editForm.contactPhone,
+          contactEmail: editForm.contactEmail
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error("Erro ao atualizar evento");
+      if (!response.ok) {
+        throw new Error("Erro ao atualizar evento");
+      }
+
+      // Fechar modal e atualizar lista
+      setShowEditModal(false);
+      fetchEvents();
+      alert("Evento atualizado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atualizar evento:", error);
+      alert("Erro ao atualizar evento. Tente novamente.");
     }
-
-    // Fechar modal e atualizar lista
-    setShowEditModal(false);
-    fetchEvents();
-    alert("Evento atualizado com sucesso!");
-  } catch (error) {
-    console.error("Erro ao atualizar evento:", error);
-    alert("Erro ao atualizar evento. Tente novamente.");
-  }
-};
+  };
 
   // Função para deletar evento
   const handleDeleteEvent = async () => {
@@ -812,10 +812,26 @@ const handleUpdateEvent = async () => {
 
   const handleProductChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setNewProduct(prev => ({
-      ...prev,
-      [name]: name === 'price' || name === 'quantity' ? parseFloat(value) : value
-    }));
+
+    // Se for o campo de preço, garantir que está usando o formato correto
+    if (name === 'price') {
+      // Substitui vírgula por ponto para cálculos internos no JavaScript
+      const formattedValue = value.replace(',', '.');
+      setNewProduct(prev => ({
+        ...prev,
+        [name]: parseFloat(formattedValue) || 0
+      }));
+    } else if (name === 'quantity') {
+      setNewProduct(prev => ({
+        ...prev,
+        [name]: parseInt(value) || 0
+      }));
+    } else {
+      setNewProduct(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   // Função para lidar com o upload de imagem do produto
@@ -1111,7 +1127,7 @@ const handleUpdateEvent = async () => {
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-700 font-medium mb-1">Data Final</label>

@@ -73,6 +73,29 @@ export default function NewEventPage() {
     },
   });
 
+  const formatPhoneNumber = (value: string) => {
+    // Remove todos os caracteres não numéricos
+    const numbers = value.replace(/\D/g, '');
+
+    // Limita a 11 dígitos (DDD + 9 dígitos)
+    const limitedNumbers = numbers.slice(0, 11);
+
+    // Aplica a máscara (XX) XXXXX-XXXX
+    if (limitedNumbers.length > 0) {
+      // Formato para números com mais de 2 dígitos
+      if (limitedNumbers.length > 2) {
+        // Se tiver mais de 7 dígitos, adiciona o hífen
+        if (limitedNumbers.length > 7) {
+          return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2, 7)}-${limitedNumbers.slice(7)}`;
+        }
+        return `(${limitedNumbers.slice(0, 2)}) ${limitedNumbers.slice(2)}`;
+      }
+      return `(${limitedNumbers})`;
+    }
+
+    return limitedNumbers;
+  };
+
   // Recupera os dados do usuário logado do localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -88,20 +111,20 @@ export default function NewEventPage() {
     }
 
     setIsSubmitting(true);
-    
+
     try {
       // Combina a data e o horário de início para criar um objeto de data completo
       const [startYear, startMonth, startDay] = data.date.split('-').map(Number);
       const [startHours, startMinutes] = data.time.split(':').map(Number);
-      
+
       // Combina a data e o horário de fim para criar um objeto de data completo para o endDate
       const [endYear, endMonth, endDay] = data.endDate.split('-').map(Number);
       const [endHours, endMinutes] = data.endTime.split(':').map(Number);
-      
+
       // Mês em JavaScript é 0-indexed (0-11), então subtraímos 1
       const eventDateTime = new Date(startYear, startMonth - 1, startDay, startHours, startMinutes);
       const eventEndDateTime = new Date(endYear, endMonth - 1, endDay, endHours, endMinutes);
-      
+
       const utcDate = eventDateTime.toISOString();
       const utcEndDate = eventEndDateTime.toISOString();
 
@@ -121,7 +144,7 @@ export default function NewEventPage() {
       }
 
       alert("Evento criado com sucesso!");
-      
+
       setTimeout(() => {
         router.push("/admin/events");
         form.reset();
@@ -140,24 +163,24 @@ export default function NewEventPage() {
       <header className="bg-gray-800 text-white py-4 px-6 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-xl font-bold">Gestão de Eventos - Admin</h1>
-          
+
           {/* Menu centralizado */}
           <nav className="flex-1 flex justify-center">
-            <a 
-              href="/admin/events" 
+            <a
+              href="/admin/events"
               className="px-4 py-2 hover:bg-gray-700 rounded-md transition-colors"
             >
               Meus Eventos
             </a>
           </nav>
-          
+
           {/* Área do usuário à direita */}
           <div className="flex items-center space-x-4">
             <div className="text-sm bg-gray-700 px-3 py-1 rounded-full">
               Logado como: {user ? user.name : "Carregando..."}
             </div>
-            <a 
-              href="http://localhost:3000" 
+            <a
+              href="http://localhost:3000"
               className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
             >
               Sair
@@ -191,10 +214,10 @@ export default function NewEventPage() {
                             Nome do Evento
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Nome do Evento" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              placeholder="Nome do Evento"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -210,10 +233,10 @@ export default function NewEventPage() {
                             Descrição
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Descrição do Evento" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              placeholder="Descrição do Evento"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -233,10 +256,10 @@ export default function NewEventPage() {
                             Data de Início
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              type="date" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              type="date"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -252,10 +275,10 @@ export default function NewEventPage() {
                             Horário de Início
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              type="time" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              type="time"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -271,10 +294,10 @@ export default function NewEventPage() {
                             Local
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Local do Evento" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              placeholder="Local do Evento"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -294,10 +317,10 @@ export default function NewEventPage() {
                             Data de Término
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              type="date" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              type="date"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -313,10 +336,10 @@ export default function NewEventPage() {
                             Horário de Término
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              type="time" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              type="time"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -336,11 +359,11 @@ export default function NewEventPage() {
                             Total de Ingressos
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="Total de Ingressos" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              type="number"
+                              placeholder="Total de Ingressos"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -356,10 +379,16 @@ export default function NewEventPage() {
                             Telefone de Contato
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="(00) 00000-0000" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              placeholder="(00) 00000-0000"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
+                              value={formatPhoneNumber(field.value || '')}
+                              onChange={(e) => {
+                                const formattedValue = formatPhoneNumber(e.target.value);
+                                field.onChange(formattedValue);
+                              }}
+                              maxLength={16} // (XX) XXXXX-XXXX tem 16 caracteres com formatação
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -379,10 +408,10 @@ export default function NewEventPage() {
                             Email de Contato
                           </FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="email@contato.com" 
-                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500" 
-                              {...field} 
+                            <Input
+                              placeholder="email@contato.com"
+                              className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500" />
@@ -400,8 +429,8 @@ export default function NewEventPage() {
                     >
                       Cancelar
                     </Button>
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="bg-gray-800 hover:bg-gray-700 text-white"
                       disabled={isSubmitting}
                     >
