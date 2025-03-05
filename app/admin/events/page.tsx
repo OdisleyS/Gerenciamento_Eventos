@@ -117,8 +117,11 @@ export default function AdminEventsPage() {
     setLoading(true);
     fetch("https://localhost:7027/api/Events")
       .then((res) => res.json())
-      .then((data) => {
-        setEvents(data);
+      .then((data: Event[]) => {
+        // Filtra os eventos que ainda não terminaram (endDate > agora)
+        const currentDate = new Date();
+        const filteredEvents = data.filter(ev => new Date(ev.endDate) > currentDate);
+        setEvents(filteredEvents);
         setLoading(false);
       })
       .catch((err) => {
@@ -126,6 +129,8 @@ export default function AdminEventsPage() {
         setLoading(false);
       });
   };
+  
+  
 
   useEffect(() => {
     fetchEvents();
