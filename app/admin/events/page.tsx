@@ -740,7 +740,7 @@ export default function AdminEventsPage() {
               <tbody class="divide-y divide-gray-700">
                 ${reportData.reportItems.map((item: ReportItemDto) => `
                   <tr class="hover:bg-gray-700/50 transition-colors">
-                    <td class="py-3 px-4 font-medium">${item.productName}</td>
+                    <td class="py-3 px-4 font-medium text-white mb-3">${item.productName}</td>
                     <td class="py-3 px-4 text-center">
                       <span class="bg-blue-900/30 text-blue-300 px-2 py-1 rounded-full text-sm">
                         ${item.totalSold}
