@@ -29,13 +29,14 @@ export default function EventDetailPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isEventDay, setIsEventDay] = useState(false);
   const [hasTicket, setHasTicket] = useState(false);
+  const [ticketCount, setTicketCount] = useState(1); // Estado para controlar a quantidade de ingressos
+  const [cameFromMyTickets, setCameFromMyTickets] = useState(false); // Para controlar de onde o usuário veio
 
   const router = useRouter();
   const params = useParams();
   const { id } = params;
 
-
-  // Modifique a função checkUserHasTicket para aceitar o mesmo tipo do id
+  // Verificar se o usuário já tem ingressos para este evento
   const checkUserHasTicket = async (userId: number, eventId: string | string[] | number) => {
     try {
       // Converta eventId para número, independente de ser string ou array
@@ -61,8 +62,24 @@ export default function EventDetailPage() {
     }
   };
 
-  // Modifique o useEffect existente para chamar esta verificação
   useEffect(() => {
+    // Verifica o referrer para saber de onde o usuário veio
+    if (typeof window !== 'undefined') {
+      const referrer = document.referrer;
+      // Se o referrer contém "my-tickets", o usuário veio da página de meus ingressos
+      if (referrer.includes("my-tickets")) {
+        setCameFromMyTickets(true);
+      }
+      
+      // Alternativa: usar localStorage para rastrear a origem
+      const storedOrigin = localStorage.getItem("navigation_origin");
+      if (storedOrigin === "my-tickets") {
+        setCameFromMyTickets(true);
+        // Limpar após uso
+        localStorage.removeItem("navigation_origin");
+      }
+    }
+    
     // Recupera os dados do usuário logado do localStorage
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -123,7 +140,21 @@ export default function EventDetailPage() {
     }
   };
 
-  // Modifique a função handleBuyTicket para atualizar o estado hasTicket após a compra
+  // Função para aumentar a quantidade de ingressos
+  const increaseTicketCount = () => {
+    if (event && ticketCount < event.availableTickets) {
+      setTicketCount(ticketCount + 1);
+    }
+  };
+
+  // Função para diminuir a quantidade de ingressos
+  const decreaseTicketCount = () => {
+    if (ticketCount > 1) {
+      setTicketCount(ticketCount - 1);
+    }
+  };
+
+  // Modificada para comprar múltiplos ingressos
   const handleBuyTicket = async () => {
     if (!event) return;
 
@@ -133,14 +164,20 @@ export default function EventDetailPage() {
       return;
     }
 
+    // Verificar se há ingressos suficientes disponíveis
+    if (event.availableTickets < ticketCount) {
+      alert(`Apenas ${event.availableTickets} ingressos disponíveis para este evento.`);
+      return;
+    }
+
     try {
-      // Usar o ID do usuário logado em vez de um ID fixo
       const response = await fetch("https://localhost:7027/api/tickets/purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventId: event.id,
-          buyerId: user.id, // Usar o ID do usuário logado
+          buyerId: user.id,
+          quantity: ticketCount // Enviando a quantidade selecionada
         }),
       });
 
@@ -153,7 +190,17 @@ export default function EventDetailPage() {
       // Atualizar o estado para mostrar que agora o usuário tem ingresso
       setHasTicket(true);
 
-      alert("Ingresso comprado com sucesso!");
+      // Atualizar a quantidade de ingressos disponíveis no estado local
+      setEvent({
+        ...event,
+        availableTickets: event.availableTickets - ticketCount
+      });
+
+      // Resetar o contador de ingressos
+      setTicketCount(1);
+
+      alert(`${ticketCount} ingresso${ticketCount > 1 ? 's' : ''} comprado${ticketCount > 1 ? 's' : ''} com sucesso!`);
+      
       // Redirecionar para a página "Meus Ingressos" após a compra
       router.push("/client/my-tickets");
     } catch (error) {
@@ -161,6 +208,7 @@ export default function EventDetailPage() {
       alert("Ocorreu um erro durante a compra do ingresso. Por favor, tente novamente.");
     }
   };
+
   const handleAccessStore = () => {
     // Redireciona para a loja do evento com o ID correto
     router.push(`/store/${id}`);
@@ -199,7 +247,7 @@ export default function EventDetailPage() {
                 href="/client/events"
                 className="px-4 py-2 hover:bg-gray-700 rounded-md transition-colors"
               >
-                Home
+                Ingressos
               </a>
               <a
                 href="/client/my-tickets"
@@ -272,24 +320,55 @@ export default function EventDetailPage() {
           </div>
 
           {/* Botões de ação */}
-          <div className="mt-8 pt-4 border-t flex justify-center space-x-4">
-            {!hasTicket ? (
+          <div className="mt-8 pt-4 border-t flex flex-col items-center space-y-4">
+            {/* CENÁRIO 1: Usuário vem da página de ingressos (não de "Meus Ingressos") */}
+            {!cameFromMyTickets && (
+              <>
+                {event.availableTickets > 0 ? (
+                  <>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-gray-700 font-medium">Quantidade de ingressos:</span>
+                      <div className="flex items-center border rounded-md">
+                        <button 
+                          onClick={decreaseTicketCount}
+                          className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-l-md"
+                          disabled={ticketCount <= 1}
+                        >
+                          -
+                        </button>
+                        <span className="px-4 py-1">{ticketCount}</span>
+                        <button 
+                          onClick={increaseTicketCount}
+                          className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-r-md"
+                          disabled={ticketCount >= event.availableTickets}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors w-full max-w-xs"
+                      onClick={handleBuyTicket}
+                    >
+                      {ticketCount > 1 ? `Comprar ${ticketCount} Ingressos` : "Comprar Ingresso"}
+                    </button>
+                  </>
+                ) : (
+                  <div className="px-6 py-3 bg-red-500 text-white rounded-md">
+                    Ingressos Esgotados
+                  </div>
+                )}
+              </>
+            )}
+            
+            {/* CENÁRIO 2: Usuário vem da página "Meus Ingressos" */}
+            {cameFromMyTickets && hasTicket && isEventDay && (
               <button
-                className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
-                onClick={handleBuyTicket}
-                disabled={event.availableTickets <= 0}
+                className="mt-4 px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors w-full max-w-xs"
+                onClick={handleAccessStore}
               >
-                {event.availableTickets > 0 ? "Comprar Ingresso" : "Ingressos Esgotados"}
+                Acessar Loja do Evento
               </button>
-            ) : (
-              isEventDay && (
-                <button
-                  className="px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
-                  onClick={handleAccessStore}
-                >
-                  Acessar Loja do Evento
-                </button>
-              )
             )}
           </div>
         </div>

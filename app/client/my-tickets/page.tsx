@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Event {
   id: number;
@@ -38,6 +39,7 @@ export default function MyTickets() {
   const [filteredTickets, setFilteredTickets] = useState<GroupedTickets[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
 
   // Estados para a funcionalidade de pesquisa
   const [searchTerm, setSearchTerm] = useState("");
@@ -158,6 +160,15 @@ export default function MyTickets() {
       // Limpar a pesquisa quando fechar
       setSearchTerm("");
     }
+  };
+
+  // Função para navegar para a página de detalhes do evento
+  const handleViewEventDetails = (eventId: number) => {
+    // Definir a origem da navegação como "my-tickets" no localStorage
+    localStorage.setItem("navigation_origin", "my-tickets");
+    
+    // Navegar para a página de detalhes do evento
+    router.push(`/client/events/${eventId}`);
   };
 
   if (loading) {
@@ -338,9 +349,7 @@ export default function MyTickets() {
                     ? "bg-gray-400 text-gray-100 cursor-not-allowed"
                     : "bg-gray-800 text-white hover:bg-gray-700"
                     }`}
-                  onClick={() =>
-                    !group.isPastEvent && window.location.assign(`/client/events/${group.event.id}`)
-                  }
+                  onClick={() => !group.isPastEvent && handleViewEventDetails(group.event.id)}
                   disabled={group.isPastEvent}
                 >
                   {group.isPastEvent ? "Evento Encerrado" : "Ver Detalhes do Evento"}
