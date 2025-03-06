@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import html2canvas from 'html2canvas';
 
 interface Event {
   id: number;
@@ -67,12 +68,32 @@ interface EventSettings {
   notifications: EventNotification;
 }
 
+interface ReportItemDto {
+  productId: number;
+  productName: string;
+  totalSold: number;
+  revenue: number;
+  currentStock: number;
+}
+
+interface EventReportDto {
+  totalProductsSold: number;
+  totalRevenue: number;
+  soldOutProducts: ReportItemDto[];
+  remainingProducts: ReportItemDto[];
+  productWithHighestStock: ReportItemDto | null;
+  productMostSold: ReportItemDto | null;
+  reportItems: ReportItemDto[];
+}
+
+
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const [exporting, setExporting] = useState<number | null>(null); // Para controlar qual evento está sendo exportado
   const router = useRouter();
 
 
@@ -648,47 +669,134 @@ export default function AdminEventsPage() {
   };
 
   // Função para exportar/baixar relatório do evento
-  const handleExportEvent = (event: Event) => {
+  // Implementação completa da função handleExportEvent
+
+  const handleExportEvent = async (event: Event) => {
     try {
-      // Criar um objeto com os dados do evento para exportação
-      const eventData = {
-        nome: event.name,
-        descricao: event.description || "N/A",
-        data: new Date(event.date).toLocaleDateString('pt-BR'),
-        hora: new Date(event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        local: event.location,
-        ingressosTotal: event.totalTickets,
-        ingressosDisponiveis: event.availableTickets,
-        ingressosVendidos: event.totalTickets - event.availableTickets,
-        telefoneContato: event.contactPhone || "N/A",
-        emailContato: event.contactEmail || "N/A"
-      };
-
-      // Converter dados para formato CSV
-      const headers = Object.keys(eventData).join(',');
-      const values = Object.values(eventData).join(',');
-      const csvContent = `${headers}\n${values}`;
-
-      // Criar um blob e link para download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
+      // Marcar este evento como em processo de exportação
+      setExporting(event.id);
+  
+      // Fetch do relatório do servidor
+      const reportResponse = await fetch(`https://localhost:7027/api/Reports/${event.id}`);
+      if (!reportResponse.ok) {
+        throw new Error("Erro ao obter dados do relatório");
+      }
+      const reportData: EventReportDto = await reportResponse.json();
+  
+      // Criar um elemento temporário para renderizar o relatório
+      const reportContainer = document.createElement('div');
+      reportContainer.id = 'temp-report-container';
+      reportContainer.className = 'bg-gray-800 rounded-lg p-6 border border-gray-700 shadow-lg';
+      reportContainer.style.position = 'fixed';
+      reportContainer.style.top = '-9999px';
+      reportContainer.style.left = '-9999px';
+      reportContainer.style.width = '1000px';  // Largura fixa para melhor qualidade
+      document.body.appendChild(reportContainer);
+  
+      // Construir o conteúdo HTML do relatório
+      reportContainer.innerHTML = `
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-blue-400 mb-4">Relatório de Evento: ${event.name}</h2>
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="bg-gray-700/50 p-4 rounded-lg">
+              <p class="text-gray-300">Data: ${new Date(event.date).toLocaleDateString('pt-BR')}</p>
+              <p class="text-gray-300">Local: ${event.location}</p>
+            </div>
+            <div class="bg-gray-700/50 p-4 rounded-lg">
+              <p class="text-gray-300">Total de Ingressos: ${event.totalTickets}</p>
+              <p class="text-gray-300">Ingressos Vendidos: ${event.totalTickets - event.availableTickets}</p>
+              <p class="text-gray-300">Disponíveis: ${event.availableTickets}</p>
+            </div>
+          </div>
+        </div>
+  
+        <div class="grid grid-cols-2 gap-6 mb-6">
+          <div class="bg-gray-700/50 p-4 rounded-lg">
+            <h3 class="text-lg font-semibold text-white mb-2">Informações Gerais</h3>
+            <p class="text-gray-300">Contato: ${event.contactEmail || 'N/A'}</p>
+            <p class="text-gray-300">Telefone: ${event.contactPhone || 'N/A'}</p>
+            <p class="text-gray-300">Ocupação: ${Math.round(((event.totalTickets - event.availableTickets) / event.totalTickets) * 100)}%</p>
+          </div>
+          
+          <div class="bg-gray-700/50 p-4 rounded-lg">
+            <h3 class="text-lg font-semibold text-white mb-2">Resumo Financeiro</h3>
+            <p class="text-gray-300">Faturamento Total: R$ ${reportData?.totalRevenue?.toFixed(2) || '0.00'}</p>
+            <p class="text-gray-300">Produtos Vendidos: ${reportData?.totalProductsSold || '0'}</p>
+          </div>
+        </div>
+  
+        ${reportData && reportData.reportItems && reportData.reportItems.length > 0 ? `
+          <div class="mt-6">
+            <h3 class="text-lg font-semibold text-white mb-3">Produtos</h3>
+            <table class="w-full text-left">
+              <thead class="bg-gray-900 text-gray-300 text-sm uppercase">
+                <tr>
+                  <th class="py-3 px-4 border-b border-gray-700">Produto</th>
+                  <th class="py-3 px-4 border-b border-gray-700 text-center">Vendidos</th>
+                  <th class="py-3 px-4 border-b border-gray-700 text-center">Estoque</th>
+                  <th class="py-3 px-4 border-b border-gray-700 text-right">Faturamento</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-700">
+                ${reportData.reportItems.map((item: ReportItemDto) => `
+                  <tr class="hover:bg-gray-700/50 transition-colors">
+                    <td class="py-3 px-4 font-medium">${item.productName}</td>
+                    <td class="py-3 px-4 text-center">
+                      <span class="bg-blue-900/30 text-blue-300 px-2 py-1 rounded-full text-sm">
+                        ${item.totalSold}
+                      </span>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                      <span class="${item.currentStock === 0
+                        ? 'bg-red-900/30 text-red-300'
+                        : 'bg-green-900/30 text-green-300'} px-2 py-1 rounded-full text-sm">
+                        ${item.currentStock}
+                      </span>
+                    </td>
+                    <td class="py-3 px-4 text-right font-medium text-green-400">
+                      R$ ${item.revenue.toFixed(2)}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
+        
+        <div class="mt-6 text-center text-sm text-gray-500">
+          © ${new Date().getFullYear()} ${event.name} - Relatório gerado em ${new Date().toLocaleString('pt-BR')}
+        </div>
+      `;
+  
+      // Aguardar um pouco para garantir que o HTML seja renderizado
+      await new Promise(resolve => setTimeout(resolve, 100));
+  
+      // Capturar a imagem do relatório usando html2canvas
+      const canvas = await html2canvas(reportContainer, {
+        scale: 2, // Melhor qualidade
+        useCORS: true,
+        backgroundColor: '#1f2937', // Cor de fundo escura
+        logging: false,
+      });
+  
+      // Converter para imagem e fazer download
+      const image = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `evento_${event.id}_${event.name.replace(/\s+/g, '_')}.csv`);
-      document.body.appendChild(link);
-
-      // Iniciar download e limpar
+      link.href = image;
+      link.download = `relatorio-evento-${event.name.replace(/\s+/g, '_')}.png`;
       link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
+  
+      // Remover o elemento temporário
+      document.body.removeChild(reportContainer);
+  
       alert("Relatório exportado com sucesso!");
     } catch (error) {
       console.error("Erro ao exportar relatório:", error);
       alert("Erro ao exportar relatório. Tente novamente.");
+    } finally {
+      setExporting(null);
     }
   };
-
   // Função para abrir modal de edição
   // No arquivo app/admin/events/page.tsx
   const openEditModal = (event: Event) => {
@@ -976,6 +1084,7 @@ export default function AdminEventsPage() {
                     <th className="py-3 px-4 font-semibold text-center rounded-tr-lg">Ações</th>
                   </tr>
                 </thead>
+                {/* Trecho da tabela no arquivo app/admin/events/page.tsx onde o botão de exportação está */}
                 <tbody>
                   {events.map((ev, index) => {
                     const ticketsSold = ev.totalTickets - ev.availableTickets;
@@ -1008,14 +1117,23 @@ export default function AdminEventsPage() {
                                 <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                               </svg>
                             </button>
+                            {/* Botão de exportação atualizado com estado de loading */}
                             <button
                               onClick={() => handleExportEvent(ev)}
                               className="p-1 rounded text-green-600 hover:bg-green-100 transition-colors"
-                              title="Exportar"
+                              title="Exportar Relatório"
+                              disabled={exporting === ev.id}
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
+                              {exporting === ev.id ? (
+                                <svg className="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              )}
                             </button>
                             <button
                               onClick={() => openDeleteModal(ev)}
