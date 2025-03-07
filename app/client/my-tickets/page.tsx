@@ -194,7 +194,7 @@ export default function MyTickets() {
         <div className="container mx-auto flex items-center">
           {/* Logo à esquerda */}
           <div className="flex-shrink-0 w-1/4">
-            <h1 className="text-xl font-bold">Controle-SE</h1>
+            <h1 className="text-xl font-bold">EGO - Gestão de Eventos</h1>
           </div>
 
           {/* Menu centralizado */}
@@ -363,7 +363,7 @@ export default function MyTickets() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white p-4 mt-8 shadow-inner">
         <div className="container mx-auto text-center text-sm">
-          © 2024 Controle-SE
+          © 2024 EGO - Gestão de Eventos
         </div>
       </footer>
     </div>

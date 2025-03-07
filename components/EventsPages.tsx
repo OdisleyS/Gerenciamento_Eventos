@@ -42,7 +42,7 @@ const EventsPage: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-gray-100">
       <header className="bg-gray-800 text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">Controle-SE</h1>
+          <h1 className="text-xl font-bold">EGO - Gestão de Eventos</h1>
           <nav className="flex space-x-4">
             <a href="#" className="hover:text-gray-300">Home</a>
             <a href="#" className="hover:text-gray-300">Ingressos</a>
@@ -65,7 +65,7 @@ const EventsPage: React.FC = () => {
 
       <footer className="bg-gray-800 text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
-          <div>© 2024 Controle-SE</div>
+          <div>© 2024 EGO - Gestão de Eventos</div>
           <nav className="flex space-x-4">
             <a href="#" className="hover:text-gray-300">Sobre</a>
             <a href="#" className="hover:text-gray-300">Contato</a>

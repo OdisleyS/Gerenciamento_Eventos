@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Controle-SE",
+  title: "EGO - Gestão de Eventos",
   description: "Sistema de gestão de eventos",
 };
 

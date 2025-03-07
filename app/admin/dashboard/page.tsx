@@ -162,7 +162,7 @@ export default function NewEventPage() {
       {/* Header */}
       <header className="bg-gray-800 text-white py-4 px-6 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">Gestão de Eventos - Admin</h1>
+          <h1 className="text-xl font-bold">EGO - Gestão de Eventos - Admin</h1>
 
           {/* Menu centralizado */}
           <nav className="flex-1 flex justify-center">
